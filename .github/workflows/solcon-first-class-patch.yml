@@ -6,6 +6,7 @@ on:
     branches: [feat/solcon-tv]
     paths:
       - 'tools/solcon/apply_first_class_source_integration.py'
+      - 'app/src/main/res/values/strings_solcon.xml'
       - '.github/workflows/solcon-first-class-patch.yml'
 
 permissions:
