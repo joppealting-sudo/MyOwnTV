@@ -38,4 +38,13 @@ class SolconEndToEndWiringTest {
         assertTrue(live.contains("SolconTvPlusRepository"))
         assertTrue(live.contains("solconTvPlusRepository.resolveLive(channel)"))
     }
+
+    @Test
+    fun `preview and multiview also use the just in time Solcon resolver`() {
+        val live = source("src/main/java/tv/own/owntv/features/live/LiveViewModel.kt")
+
+        assertTrue(live.contains("playPreview(resolved)"))
+        assertTrue(live.contains("tuneTile(engine, resolved, muted)"))
+        assertTrue(live.contains("val playableChannel = resolveSolconPlayback(channel)"))
+    }
 }
