@@ -91,7 +91,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val defaultPortalName = stringResource(R.string.setup_default_portal)
 
     var showAdd by remember { mutableStateOf(false) }
-    // Within "Add source": null = the Remote|Manual chooser, else the chosen path.
+    // Within "Add source": null = the Remote|Solcon|Manual chooser, else the chosen path.
     var addMode by remember { mutableStateOf<AddMode?>(null) }
     var editingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var confirmDelete by remember { mutableStateOf<SourceEntity?>(null) }
@@ -143,7 +143,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         withFrameNanos { }
         runCatching { contextFocus.requestFocus() }
     }
-    // Leaving "Add source" always returns to the Remote|Manual chooser next time (and drops any
+    // Leaving "Add source" always returns to the Remote|Solcon|Manual chooser next time (and drops any
     // running Remote listener), so a prior choice never skips the chooser.
     LaunchedEffect(showAdd) { if (!showAdd) { addMode = null; vm.stopRemoteListener() } }
     // A failed import/re-sync swaps the form for an error screen — move focus onto its action button.
@@ -198,8 +198,14 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 SettingsViewModel.ImportState.Idle -> when (addMode) {
                     null -> AddSourceChooserScreen(
                         onRemote = { addMode = AddMode.REMOTE },
+                        onSolcon = { addMode = AddMode.SOLCON },
                         onManual = { addMode = AddMode.MANUAL },
                         onBack = { showAdd = false },
+                        modifier = Modifier,
+                    )
+                    AddMode.SOLCON -> SolconTvPlusAccountScreen(
+                        onBack = { addMode = null },
+                        onSynchronized = { addMode = null; showAdd = false },
                         modifier = Modifier,
                     )
                     AddMode.REMOTE -> RemoteSetupScreen(
@@ -642,7 +648,7 @@ private fun ResyncChoiceDialog(
 }
 
 /** How the user chose to add a source: fill it from another device (Remote) or type it here (Manual). */
-private enum class AddMode { REMOTE, MANUAL }
+private enum class AddMode { REMOTE, SOLCON, MANUAL }
 
 /**
  * Result of the row's "Test" button: is the server reachable, is the subscription still good, and how

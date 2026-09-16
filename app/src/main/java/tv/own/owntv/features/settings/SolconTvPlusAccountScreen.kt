@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -42,12 +43,14 @@ import tv.own.owntv.ui.theme.OwnTVTheme
 fun SolconTvPlusAccountScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onSynchronized: (() -> Unit)? = null,
 ) {
     val vm: SolconTvPlusViewModel = koinViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val colors = OwnTVTheme.colors
     val firstFocus = remember { FocusRequester() }
+    val synchronizedCallback by rememberUpdatedState(onSynchronized)
     var subscriptionNumber by remember { mutableStateOf(String()) }
     var pin by remember { mutableStateOf(String()) }
 
@@ -56,6 +59,11 @@ fun SolconTvPlusAccountScreen(
     val radioCategoryName = stringResource(R.string.solcon_tvplus_radio_category)
 
     LaunchedEffect(state) {
+        val connected = state as? SolconTvPlusViewModel.UiState.Connected
+        if (connected?.summary != null && synchronizedCallback != null) {
+            synchronizedCallback?.invoke()
+            return@LaunchedEffect
+        }
         if (state !is SolconTvPlusViewModel.UiState.Busy) {
             kotlinx.coroutines.delay(80)
             runCatching { firstFocus.requestFocus() }

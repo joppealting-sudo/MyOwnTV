@@ -43,6 +43,7 @@ import tv.own.owntv.ui.theme.OwnTVTheme
 @Composable
 fun AddSourceChooserScreen(
     onRemote: () -> Unit,
+    onSolcon: () -> Unit,
     onManual: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -72,6 +73,12 @@ fun AddSourceChooserScreen(
                     subtitle = stringResource(R.string.setup_use_phone_same_wifi),
                     onClick = onRemote,
                     modifier = Modifier.focusRequester(firstFocus),
+                )
+                ChooserCard(
+                    icon = OwnTVIcon.LIVE_TV,
+                    title = stringResource(R.string.solcon_tvplus_title),
+                    subtitle = stringResource(R.string.solcon_tvplus_chooser_subtitle),
+                    onClick = onSolcon,
                 )
                 ChooserCard(
                     icon = OwnTVIcon.ADD,
