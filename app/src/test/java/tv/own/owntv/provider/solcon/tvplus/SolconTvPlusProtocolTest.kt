@@ -71,12 +71,37 @@ class SolconTvPlusProtocolTest {
     }
 
     @Test
-    fun `failed provider result is not a usable login`() {
+    fun `failed provider result keeps provider error code`() {
         val parsed = SolconTvPlusProtocol.parseLoginResponse(
-            """{"resultCode":"NOK","errorDescription":"Wrong credentials"}""",
+            """{"resultCode":"NOK","errorCode":"INVALID_LOGIN_CREDENTIALS","errorDescription":"Wrong credentials"}""",
             setCookie = null,
         )
-        assertTrue(parsed is SolconTvPlusProtocol.LoginParse.Rejected)
+        require(parsed is SolconTvPlusProtocol.LoginParse.Rejected)
+        assertEquals("INVALID_LOGIN_CREDENTIALS", parsed.code)
+    }
+
+    @Test
+    fun `only explicit credential errors classify as invalid credentials`() {
+        assertEquals(
+            SolconTvPlusProtocol.LoginRejectionKind.INVALID_CREDENTIALS,
+            SolconTvPlusProtocol.classifyLoginRejection("INVALID_LOGIN_CREDENTIALS", "Wrong credentials"),
+        )
+        assertEquals(
+            SolconTvPlusProtocol.LoginRejectionKind.ACCOUNT_BLOCKED,
+            SolconTvPlusProtocol.classifyLoginRejection("BLOCKED_USER", "Account blocked"),
+        )
+        assertEquals(
+            SolconTvPlusProtocol.LoginRejectionKind.DEVICE_LIMIT,
+            SolconTvPlusProtocol.classifyLoginRejection("MAX_DEVICES", "Maximum number of devices"),
+        )
+        assertEquals(
+            SolconTvPlusProtocol.LoginRejectionKind.OTHER,
+            SolconTvPlusProtocol.classifyLoginRejection("UNAUTHORIZED_CLIENT", "Client is not allowed"),
+        )
+        assertEquals(
+            SolconTvPlusProtocol.LoginRejectionKind.OTHER,
+            SolconTvPlusProtocol.classifyLoginRejection(null, null),
+        )
     }
 
     @Test
