@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -161,19 +162,34 @@ fun SolconTvPlusAccountScreen(
                     color = colors.primary,
                 )
                 current.summary?.let { summary ->
+                    val channelsText = pluralStringResource(
+                        R.plurals.solcon_tvplus_channels_count,
+                        summary.channels,
+                        summary.channels,
+                    )
+                    val radioText = pluralStringResource(
+                        R.plurals.solcon_tvplus_radio_channels_count,
+                        summary.radioChannels,
+                        summary.radioChannels,
+                    )
+                    val programmesText = pluralStringResource(
+                        R.plurals.solcon_tvplus_guide_entries_count,
+                        summary.programmes,
+                        summary.programmes,
+                    )
                     Text(
                         if (summary.programmes > 0) {
                             stringResource(
                                 R.string.solcon_tvplus_sync_done_epg,
-                                summary.channels,
-                                summary.radioChannels,
-                                summary.programmes,
+                                channelsText,
+                                radioText,
+                                programmesText,
                             )
                         } else {
                             stringResource(
                                 R.string.solcon_tvplus_sync_done,
-                                summary.channels,
-                                summary.radioChannels,
+                                channelsText,
+                                radioText,
                             )
                         },
                         style = MaterialTheme.typography.bodyMedium,
