@@ -44,6 +44,16 @@ jobs:
       - name: Resolve core
         uses: ./.github/actions/resolve-core
 
+      - name: Classify Solcon protocol literals
+        run: python tools/solcon/classify_solcon_protocol_literals.py
+
+      - name: Upload generated i18n manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: Solcon-safe-literals
+          path: tools/i18n/safe_literals.txt
+          if-no-files-found: error
+
       - name: Unit tests
         run: |
           chmod +x ./gradlew
