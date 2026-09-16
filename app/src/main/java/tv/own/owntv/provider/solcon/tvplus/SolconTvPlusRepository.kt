@@ -26,6 +26,8 @@ class SolconTvPlusRepository(
     private val epgDao: EpgDao,
     private val settings: SettingsRepository,
 ) {
+    class EmptyCatalogException : IllegalStateException("Solcon TV+ returned no subscribed channels")
+
     data class SyncSummary(
         val channels: Int,
         val radioChannels: Int,
@@ -56,7 +58,7 @@ class SolconTvPlusRepository(
         radioCategoryName: String,
     ): Result<SyncSummary> = runCatching {
         val channels = client.liveChannels().getOrThrow()
-        require(channels.isNotEmpty()) { "Solcon TV+ returned no subscribed channels" }
+        if (channels.isEmpty()) throw EmptyCatalogException()
         val profileId = settings.activeProfileIdNow()
         val sourceId = ensureSource(profileId, sourceName)
         val categoryIds = ensureCategories(sourceId, tvCategoryName, radioCategoryName)
