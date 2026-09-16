@@ -63,6 +63,7 @@ import tv.own.owntv.features.setup.playlistAutoRefreshLabel
 import tv.own.owntv.features.setup.AddSourceChooserScreen
 import tv.own.owntv.features.setup.AddSourceScreen
 import tv.own.owntv.features.setup.RemoteSetupScreen
+import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository
 import tv.own.owntv.ui.components.OwnTVButton
 import tv.own.owntv.ui.components.dialogPanel
 import tv.own.owntv.ui.components.modalScrim
@@ -91,8 +92,9 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val defaultPortalName = stringResource(R.string.setup_default_portal)
 
     var showAdd by remember { mutableStateOf(false) }
-    // Within "Add source": null = the Remote|Manual chooser, else the chosen path.
+    // Within "Add source": null = the Remote|Solcon|Manual chooser, else the chosen path.
     var addMode by remember { mutableStateOf<AddMode?>(null) }
+    var managingSolcon by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var confirmDelete by remember { mutableStateOf<SourceEntity?>(null) }
     var resyncChoice by remember { mutableStateOf<SourceEntity?>(null) }
@@ -112,8 +114,8 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     // Whenever the list view is showing (no add form / edit form / delete dialog on top), restore
     // focus inside the list — not on "Add Source" as before, which is what pushed focus out of the
     // menu. contextId/contextFocus decide the specific row; firstRowFocus is the empty-list fallback.
-    LaunchedEffect(showAdd, editingSource, confirmDelete) {
-        if (showAdd || editingSource != null || confirmDelete != null) return@LaunchedEffect
+    LaunchedEffect(showAdd, managingSolcon, editingSource, confirmDelete) {
+        if (showAdd || managingSolcon || editingSource != null || confirmDelete != null) return@LaunchedEffect
         kotlinx.coroutines.delay(120)
         val targetId = contextId
         if (targetId != null && sources.any { it.id == targetId }) {
@@ -143,7 +145,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         withFrameNanos { }
         runCatching { contextFocus.requestFocus() }
     }
-    // Leaving "Add source" always returns to the Remote|Manual chooser next time (and drops any
+    // Leaving "Add source" always returns to the Remote|Solcon|Manual chooser next time (and drops any
     // running Remote listener), so a prior choice never skips the chooser.
     LaunchedEffect(showAdd) { if (!showAdd) { addMode = null; vm.stopRemoteListener() } }
     // A failed import/re-sync swaps the form for an error screen — move focus onto its action button.
@@ -155,6 +157,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     BackHandler {
         when {
+            managingSolcon -> managingSolcon = false
             showAdd -> { showAdd = false; addMode = null; vm.stopRemoteListener(); vm.cancelImport() }
             editingSource != null -> editingSource = null
             else -> onBack()
@@ -162,7 +165,13 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (editingSource != null) {
+        if (managingSolcon) {
+            SolconTvPlusAccountScreen(
+                onBack = { managingSolcon = false },
+                onSynchronized = { managingSolcon = false },
+                modifier = Modifier,
+            )
+        } else if (editingSource != null) {
             val src = editingSource!!
             AddSourceScreen(
                 initial = src,
@@ -198,8 +207,14 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 SettingsViewModel.ImportState.Idle -> when (addMode) {
                     null -> AddSourceChooserScreen(
                         onRemote = { addMode = AddMode.REMOTE },
+                        onSolcon = { addMode = AddMode.SOLCON },
                         onManual = { addMode = AddMode.MANUAL },
                         onBack = { showAdd = false },
+                        modifier = Modifier,
+                    )
+                    AddMode.SOLCON -> SolconTvPlusAccountScreen(
+                        onBack = { addMode = null },
+                        onSynchronized = { addMode = null; showAdd = false },
                         modifier = Modifier,
                     )
                     AddMode.REMOTE -> RemoteSetupScreen(
@@ -325,11 +340,13 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             // Default is only the explicitly-chosen source; when none is set every playlist shows
                             // (no badge). Chosen via the add/edit form's "Default playlist" toggle, not a row action.
                             val isDefault = source.id == defaultId
+                            val isSolcon = source.url == SolconTvPlusRepository.SOURCE_URL
                             val counts by remember(source.id) { vm.contentCounts(source.id) }.collectAsStateWithLifecycle(null)
                             val syncState by remember(source.id) { vm.syncState(source.id) }.collectAsStateWithLifecycle(CatalogSyncState.Idle)
 
                             SourceRow(
                                 source = source,
+                                providerManaged = isSolcon,
                                 autoRefresh = playlistAutoRefresh[source.id] ?: PlaylistRefresh.OFF,
                                 isDefault = isDefault,
                                 expiry = sourceExpiry[source.id],
@@ -342,6 +359,11 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                     source.id == contextId -> Modifier.focusRequester(contextFocus)
                                     index == 0 -> Modifier.focusRequester(firstRowFocus)
                                     else -> Modifier
+                                },
+                                onManageProvider = {
+                                    contextId = source.id
+                                    contextIndex = index
+                                    managingSolcon = true
                                 },
                                 onEdit = { contextId = source.id; contextIndex = index; editingSource = source },
                                 onTest = { contextId = source.id; contextIndex = index; vm.testSource(source) },
@@ -402,6 +424,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun SourceRow(
     source: SourceEntity,
+    providerManaged: Boolean,
     autoRefresh: PlaylistRefresh,
     isDefault: Boolean,
     expiry: String?,
@@ -409,6 +432,7 @@ private fun SourceRow(
     syncState: CatalogSyncState,
     isDeleting: Boolean,
     rowModifier: Modifier,
+    onManageProvider: () -> Unit,
     onEdit: () -> Unit,
     onTest: () -> Unit,
     onResync: () -> Unit,
@@ -416,7 +440,7 @@ private fun SourceRow(
     onDelete: () -> Unit,
 ) {
     val colors = OwnTVTheme.colors
-    val activeSync = syncState as? CatalogSyncState.Syncing
+    val activeSync = if (providerManaged) null else syncState as? CatalogSyncState.Syncing
     val activeCounts = activeSync?.countsLabel(source.type, counts)
     Row(
         modifier = rowModifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colors.surfaceContainerHigh).padding(16.dp),
@@ -454,19 +478,25 @@ private fun SourceRow(
                     )
                 }
             }
-            val sourceTypeText = stringResource(
-                when (source.type) {
-                    SourceType.XTREAM -> R.string.settings_sources_type_xtream
-                    SourceType.M3U -> R.string.settings_sources_type_m3u
-                    SourceType.STALKER -> R.string.settings_sources_type_stalker
-                    SourceType.LOCAL_BACKUP -> R.string.settings_sources_backup
-                },
-                source.url,
-            )
+            val sourceTypeText = if (providerManaged) {
+                stringResource(R.string.solcon_tvplus_source_type)
+            } else {
+                stringResource(
+                    when (source.type) {
+                        SourceType.XTREAM -> R.string.settings_sources_type_xtream
+                        SourceType.M3U -> R.string.settings_sources_type_m3u
+                        SourceType.STALKER -> R.string.settings_sources_type_stalker
+                        SourceType.LOCAL_BACKUP -> R.string.settings_sources_backup
+                    },
+                    source.url,
+                )
+            }
             val visibleCounts = if (activeSync == null) counts?.breakdownText() else activeCounts?.displayText()
             val details = buildList {
                 add(sourceTypeText)
-                if (autoRefresh.mode != PlaylistAutoRefresh.OFF) add(stringResource(R.string.settings_sources_auto_refresh, playlistAutoRefreshLabel(autoRefresh)))
+                if (!providerManaged && autoRefresh.mode != PlaylistAutoRefresh.OFF) {
+                    add(stringResource(R.string.settings_sources_auto_refresh, playlistAutoRefreshLabel(autoRefresh)))
+                }
                 if (!expiry.isNullOrBlank()) add(stringResource(R.string.settings_sources_expiry, expiry))
                 if (!visibleCounts.isNullOrBlank()) add(visibleCounts)
                 else if (activeSync != null) add(stringResource(R.string.settings_sources_preparing_detail))
@@ -484,6 +514,14 @@ private fun SourceRow(
             OwnTVSpinner(sizeDp = 22)
             Spacer(Modifier.width(10.dp))
             Text(stringResource(R.string.settings_sources_removing_detail), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+        } else if (providerManaged) {
+            OwnTVButton(
+                stringResource(R.string.solcon_tvplus_manage_source),
+                onClick = onManageProvider,
+                style = OwnTVButtonStyle.SECONDARY,
+            )
+            Spacer(Modifier.width(10.dp))
+            OwnTVButton(stringResource(R.string.settings_sources_delete), onClick = onDelete, style = OwnTVButtonStyle.SECONDARY)
         } else {
             OwnTVButton(stringResource(R.string.settings_sources_edit), onClick = onEdit, style = OwnTVButtonStyle.SECONDARY)
             Spacer(Modifier.width(10.dp))
@@ -642,7 +680,7 @@ private fun ResyncChoiceDialog(
 }
 
 /** How the user chose to add a source: fill it from another device (Remote) or type it here (Manual). */
-private enum class AddMode { REMOTE, MANUAL }
+private enum class AddMode { REMOTE, SOLCON, MANUAL }
 
 /**
  * Result of the row's "Test" button: is the server reachable, is the subscription still good, and how

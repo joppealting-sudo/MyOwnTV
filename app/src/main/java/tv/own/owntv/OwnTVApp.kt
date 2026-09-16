@@ -25,6 +25,7 @@ import tv.own.owntv.core.di.databaseModule
 import tv.own.owntv.core.di.dataModule
 import tv.own.owntv.di.appModule
 import tv.own.owntv.di.playerModule
+import tv.own.owntv.di.solconModule
 import tv.own.owntv.ui.theme.subtitleFontResource
 
 class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Configuration.Provider {
@@ -105,7 +106,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)
-            modules(coreModule, appModule, databaseModule, dataModule, playerModule)
+            modules(coreModule, appModule, databaseModule, dataModule, playerModule, solconModule)
         }
         Perf.stamp("koin-started")
         // Detailed playback logging follows the setting for the WHOLE process. It used to be observed by

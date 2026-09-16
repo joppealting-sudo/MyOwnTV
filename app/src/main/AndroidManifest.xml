@@ -10,6 +10,10 @@
     <!-- In-app updates: hand the downloaded release APK to the system installer. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Local IPTV multicast. Wi-Fi needs a MulticastLock; Ethernet ignores these Wi-Fi permissions. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
     <!-- MODIFY_AUDIO_SETTINGS is declared by :player-core, which owns VolumeBoost. -->
 
     <!-- Android TV provider writes for Watch Next cards. -->

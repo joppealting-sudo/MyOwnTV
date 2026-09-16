@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="solcon_tvplus_title">Solcon TV+</string>
+    <string name="solcon_tvplus_chooser_subtitle">Sign in with your subscription number and PIN</string>
+    <string name="solcon_tvplus_settings_description">Login, subscription and synchronization</string>
+    <string name="solcon_tvplus_login_description">Use the same subscription number and PIN you use in the official Solcon TV+ app.</string>
+    <string name="solcon_tvplus_subscription_number">Subscription number</string>
+    <string name="solcon_tvplus_subscription_placeholder">Enter subscription number</string>
+    <string name="solcon_tvplus_pin">PIN</string>
+    <string name="solcon_tvplus_pin_placeholder">Enter PIN</string>
+    <string name="solcon_tvplus_sign_in">Sign in &amp; sync</string>
+    <string name="solcon_tvplus_refresh">Refresh channels</string>
+    <string name="solcon_tvplus_sign_out">Sign out</string>
+    <string name="solcon_tvplus_signing_in">Signing in to Solcon TV+…</string>
+    <string name="solcon_tvplus_syncing">Syncing channels and guide…</string>
+    <string name="solcon_tvplus_connected">Solcon TV+ is connected</string>
+    <plurals name="solcon_tvplus_channels_count">
+        <item quantity="one">%d channel</item>
+        <item quantity="other">%d channels</item>
+    </plurals>
+    <plurals name="solcon_tvplus_radio_channels_count">
+        <item quantity="one">%d radio channel</item>
+        <item quantity="other">%d radio channels</item>
+    </plurals>
+    <plurals name="solcon_tvplus_guide_entries_count">
+        <item quantity="one">%d guide entry</item>
+        <item quantity="other">%d guide entries</item>
+    </plurals>
+    <string name="solcon_tvplus_sync_done">Synced %1$s, including %2$s.</string>
+    <string name="solcon_tvplus_sync_done_epg">Synced %1$s, %2$s and %3$s.</string>
+    <string name="solcon_tvplus_error_credentials">The subscription number or PIN was not accepted.</string>
+    <string name="solcon_tvplus_error_device_limit">Your Solcon TV+ account has reached its device limit.</string>
+    <string name="solcon_tvplus_error_network">Could not reach Solcon TV+. Check the network connection and try again.</string>
+    <string name="solcon_tvplus_error_protocol">Solcon TV+ returned a response this build does not understand yet.</string>
+    <string name="solcon_tvplus_error_empty_catalog">Solcon TV+ returned no subscribed channels.</string>
+    <string name="solcon_tvplus_error_playback">Solcon TV+ could not prepare this channel.</string>
+    <string name="solcon_tvplus_error_protected">This channel needs a provider DRM flow that MyOwnTV does not support yet.</string>
+    <string name="solcon_tvplus_tv_category">Solcon TV</string>
+    <string name="solcon_tvplus_radio_category">Radio</string>
+    <string name="solcon_tvplus_source_name">Solcon TV+</string>
+    <string name="solcon_tvplus_security_note">Your PIN is used only to create a Solcon TV+ device session. It is not stored after login.</string>
+    <string name="solcon_tvplus_status_title">Provider status</string>
+    <string name="solcon_tvplus_last_sync_time">Last sync: %1$s</string>
+    <string name="solcon_tvplus_cached_summary">Cached: %1$s, %2$s and %3$s.</string>
+    <string name="solcon_tvplus_epg_complete">EPG sync complete</string>
+    <string name="solcon_tvplus_epg_partial">EPG sync partial</string>
+    <string name="solcon_tvplus_discovery_discovered">API endpoint discovered automatically</string>
+    <string name="solcon_tvplus_discovery_default">Using Solcon’s standard API endpoint</string>
+    <string name="solcon_tvplus_discovery_compat">Using Solcon’s compatibility API endpoint</string>
+    <string name="solcon_tvplus_route_clear">Last playback: standard stream</string>
+    <string name="solcon_tvplus_route_multicast">Last playback: multicast</string>
+    <string name="solcon_tvplus_route_widevine">Last playback: Widevine</string>
+    <string name="solcon_tvplus_playback_session_expired">The Solcon TV+ session expired. Sign in again.</string>
+    <string name="solcon_tvplus_playback_unsupported">This protected Solcon TV+ channel is not supported by MyOwnTV.</string>
+    <string name="solcon_tvplus_source_type">Solcon TV+</string>
+    <string name="solcon_tvplus_manage_source">Account &amp; sync</string>
+</resources>

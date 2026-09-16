@@ -121,6 +121,8 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LIVE
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	Solcon TV+ playback failed (${resolved.category.name})
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	Solcon TV+ playback unavailable (${resolved.category.name})
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	engine toggle '${channel.name}' -> ${if (goToMpv) "mpv" else "exoplayer"} (currentlyOnExo=${_liveOnExo.value})
@@ -377,6 +379,7 @@
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	setAndroidTvHomeEnabled enabled=$enabled
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	timed out
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	unknown host
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SolconSettingsRoute.kt	solcon_tvplus
 12	empty	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	$exo · $mpv
 3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	${src.name} · $value
@@ -633,6 +636,190 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	toolPadding
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	rec
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	recPulse
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	$scheme://$host:$port
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	^solcon-tvplus://live/([0-9]+)$
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	rtp
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	udp
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	epg_complete
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_discovery
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_error
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_playback_route
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_sync_at_ms
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	programmes
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	radio_channels
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	session_authenticated
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	solcon_tvplus_diagnostics
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	tv_channels
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	;
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Accept
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Authorization
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Bearer $it
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Channel catalog HTTP ${payload.code}
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Cookie
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	EPG HTTP ${payload.code}
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	HTTP ${response.code}
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Missing credentials
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	MyOwnTV Android TV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Playback HTTP ${payload.code}
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Set-Cookie
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Solcon TV+ session is not authenticated
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	User-Agent
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	application/json
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	application/json; charset=utf-8
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	client-id
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	device
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	limit
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	max
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	maximum
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	tenant-id
+3	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	$channelId:$start
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	${normalizeRoot(root)}/${path.trimStart('/')}
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	%20
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	&filter_channelIds=${encode(ids)}
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	***
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	+
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	,
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/101/
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/kpn
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/nld
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	0
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	ANDROIDTV
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Android
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Android TV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	CONTENT/VIDEOURL/LIVE/${encodePath(channelId)}/${encodePath(contentId)}/?deviceId=${encode(deviceId)}&profile=G02&time=$nowMs
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Clear(url=**redacted**, headers=${streamHeaders.keys})
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	DEVICEID
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Invalid login response
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Invalid playback response
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Login succeeded without usable session material
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	MyOwnTV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	No playback URL returned
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	OK
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	PCTV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Playback rejected
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Provider returned protected playback without a standard Widevine license URL
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	SUCCESS
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Session(token=${if (token.isNullOrBlank()) "none" else "***"}, cookie=${if (cookie.isNullOrBlank()) "none" else "***"}, deviceSession=${deviceSession?.let { "set" } ?: "none"}, accountId=${accountId?.let { "set" } ?: "none"})
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	TRAY/EPG?filter_startTime=$startMs&filter_endTime=$endMs&from=0&to=9999
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	TRAY/LIVECHANNELS?orderBy=orderId&sortOrder=asc&from=0&to=999&dfilter_channels=subscription
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	USER/SESSIONS/
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Widevine(url=**redacted**, licenseUrl=**redacted**, streamHeaders=${streamHeaders.keys}, licenseHeaders=${licenseHeaders.keys})
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Y
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accessToken
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accountDeviceIdType
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accountId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	airingEndTime
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	airingStartTime
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	api-avs
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	appVersion
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	archiveDays
+3	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	assetId
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	catchupDays
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channel
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelName
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelNumber
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	clientId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	contentId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	contentType
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	cookie
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	credentialsStdAuth
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	customerId
+3	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	description
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceFirmVersion
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceId
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceIdType
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceInfo
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceRegistrationData
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceSession
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceSessionId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceType
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	devicesession
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmLicenseUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmSystem
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmType
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	end
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	endTime
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	epgChannelId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	errorDescription
+6	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	externalChannelId
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://api-avs67.tv.prod.itvavs.prod.aws.kpn.com/101/1.2.0/A/nld/pctv/kpn
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://api-avs67.tv.prod.itvavs.prod.aws.kpn.com/101/1.5/A/nld/kpn
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://ausar.tcloud-itv-prd1.prod.aws.kpn.com/public/v1/ear?type=ott
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	id
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	imageUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	lcn
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	licenseUrl
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	logoUrl
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	longDescription
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	manifestUrl
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	mediaType
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	message
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	metadata
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	model
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	name
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	none
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	number
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	orderId
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	password
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	pictureUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	playUrl
+3	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	programId
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	programTitle
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	protectionType
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	radio
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	remember
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	replayDays
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	resultCode
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	resultObj
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	sessionCookie
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	sessionToken
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	set
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	shortDescription
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	start
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	startTime
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	stop
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	streamingUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	tenantId
+4	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	title
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	token
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	type
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	url
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	username
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	value
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	vendor
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	videoUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevine
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevineLicenseUrl
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	xmltvId
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${item.id}
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Invalid Solcon TV+ channel reference
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ playback request failed
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ returned no subscribed channels
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-radio
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tv
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tvplus://account
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tvplus://live/
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	***
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	.
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	AES/GCM/NoPadding
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	AndroidKeyStore
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	Invalid encrypted session
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	StoredSession(apiRoot=$apiRoot, token=${if (token.isNullOrBlank()) "none" else "***"}, cookie=${if (cookie.isNullOrBlank()) "none" else "***"}, authenticated=true)
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	accountId
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	apiRoot
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	clientId
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	cookie
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	deviceSession
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	device_id
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	none
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	owntv.solcon.tvplus.session.v1
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	session
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	solcon_tvplus_session_v1
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	tenantId
+2	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	token
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	background_${System.currentTimeMillis()}.$ext
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	png
 1	performance	app/src/main/java/tv/own/owntv/ui/components/FocusableSurface.kt	focusContainer

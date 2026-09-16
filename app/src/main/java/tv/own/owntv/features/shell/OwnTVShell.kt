@@ -45,6 +45,7 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -229,20 +230,40 @@ fun OwnTVShell(
     // up/down (CH+/CH-). Guide tunes start through LiveViewModel too (they set zapSource = LIVE_TV), so
     // there is exactly ONE zap path: liveVm's. The Guide keeps its own EpgViewModel only for the grid.
     val liveVm = org.koin.androidx.compose.koinViewModel<LiveViewModel>()
+    val solconSessionExpired = stringResource(R.string.solcon_tvplus_playback_session_expired)
+    val solconProtectedUnsupported = stringResource(R.string.solcon_tvplus_playback_unsupported)
+    val solconPlaybackFailed = stringResource(R.string.solcon_tvplus_error_playback)
+    val solconNetworkFailed = stringResource(R.string.solcon_tvplus_error_network)
+    LaunchedEffect(liveVm) {
+        liveVm.solconPlaybackError.collect { category ->
+            localSubToast.show(
+                when (category) {
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED -> solconSessionExpired
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.PROTECTED_UNSUPPORTED -> solconProtectedUnsupported
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NETWORK -> solconNetworkFailed
+                    else -> solconPlaybackFailed
+                },
+            )
+        }
+    }
     val epgVm = org.koin.androidx.compose.koinViewModel<tv.own.owntv.features.epg.EpgViewModel>()
     val liveCanZap by liveVm.canZap.collectAsStateWithLifecycle()
     // Full-screen is running on the ExoPlayer engine (a promoted Live preview) rather than mpv.
     val liveOnExo by liveVm.liveOnExo.collectAsStateWithLifecycle()
+    val liveOnMulticast by liveVm.liveOnMulticast.collectAsStateWithLifecycle()
+    val activePlayerEngine: tv.own.owntv.player.PlaybackEngine = when {
+        liveOnMulticast -> liveVm.multicastEngine
+        liveOnExo -> liveVm.previewEngine
+        else -> mpvEngine
+    }
     // A catch-up archive programme is playing (Guide "Watch from start" or the Live TV catch-up picker)
     // rather than the live stream — the HUD swaps live-only controls for the VOD ones.
     val catchupActive by liveVm.catchupActive.collectAsStateWithLifecycle()
     val vodExoActive by player.exoActiveState.collectAsStateWithLifecycle()
     // Publish the active engine to the system (audio focus + MediaSession), and detach when the player
     // is closed — an inactive session must not keep answering the TV's transport keys or the Assistant.
-    LaunchedEffect(liveOnExo, playerMode) {
-        playbackSession.attach(
-            if (playerMode == PlayerMode.NONE) null else if (liveOnExo) liveVm.previewEngine else mpvEngine,
-        )
+    LaunchedEffect(liveOnExo, liveOnMulticast, playerMode) {
+        playbackSession.attach(if (playerMode == PlayerMode.NONE) null else activePlayerEngine)
     }
     // Auto frame rate: only ever applied to the FULL-SCREEN surface (never the mini-player or the
     // in-pane Live preview) — see FrameRateController.
@@ -520,7 +541,7 @@ fun OwnTVShell(
     // Switch the current stream to audio-only and surface the now-playing bar in the top bar. Stop the
     // video decoder FIRST (plan §5 ordering rule), then drop the video surface by leaving FULLSCREEN/MINI.
     val toAudioMode = {
-        (if (liveOnExo) liveVm.previewEngine else mpvEngine).enterAudioOnly()
+        (activePlayerEngine).enterAudioOnly()
         playerMode = PlayerMode.AUDIO
         restoreFocus = true
         runCatching { sidebarFocus.requestFocus() }
@@ -529,7 +550,7 @@ fun OwnTVShell(
 
     // Whichever engine is on the speaker right now — what the rail item pictures and what the media
     // keys act on while the window is docked.
-    val dockedEngine = if (liveOnExo) liveVm.previewEngine else mpvEngine
+    val dockedEngine = activePlayerEngine
     val dockedPlaying by dockedEngine.isPlaying.collectAsStateWithLifecycle()
     val nowPlayingRail = when (playerMode) {
         PlayerMode.MINI, PlayerMode.AUDIO -> tv.own.owntv.features.shell.components.NowPlayingRail(
@@ -734,7 +755,7 @@ fun OwnTVShell(
     // CH+/CH− paging, and the full-screen HUD still owns zapping.
     val dockedZap: ((Int) -> Unit)? = when {
         playerMode != PlayerMode.MINI -> null
-        zapSource == MainSection.LIVE_TV && liveCanZap && (liveOnExo || player.isLiveContent) -> liveVm::zap
+        zapSource == MainSection.LIVE_TV && liveCanZap && (liveOnMulticast || liveOnExo || player.isLiveContent) -> liveVm::zap
         else -> null
     }
 
@@ -930,13 +951,13 @@ fun OwnTVShell(
                     audioBarExpanded = audioBarExpanded,
                     audioBar = if (playerMode == PlayerMode.AUDIO) {
                         {
-                            val isLiveStream = liveOnExo || player.isLiveContent
+                            val isLiveStream = liveOnMulticast || liveOnExo || player.isLiveContent
                             val zapFn: ((Int) -> Unit)? = when {
                                 !isLiveStream -> null
                                 zapSource == MainSection.LIVE_TV && liveCanZap -> liveVm::zap
                                 else -> null
                             }
-                            val audioEngine = if (liveOnExo) liveVm.previewEngine else mpvEngine
+                            val audioEngine = activePlayerEngine
                             val vodNav by audioEngine.nav.collectAsStateWithLifecycle()
                             tv.own.owntv.player.AudioNowPlayingBar(
                                 player = audioEngine,
@@ -1273,7 +1294,11 @@ fun OwnTVShell(
             // "Promote Preview": a Live channel playing on ExoPlayer renders the ExoPlayer surface — in BOTH
             // full-screen AND the docked mini-player (same call site = the surface persists across dock/
             // expand, so playback never blips). Everything else (mpv) renders mpv's surface.
-            if (liveOnExo) {
+            if (liveOnMulticast) {
+                tv.own.owntv.provider.solcon.multicast.SolconMulticastSurface(
+                    engine = liveVm.multicastEngine, modifier = Modifier.fillMaxSize(), keepAwake = true,
+                )
+            } else if (liveOnExo) {
                 tv.own.owntv.player.ExoPreviewSurface(
                     engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize(),
                     keepAwake = true, autoFrameRate = isFull && autoFrameRate,
@@ -1284,18 +1309,14 @@ fun OwnTVShell(
             // The item has no video track of its own (a radio channel, a music-only "movie"). Playing it is
             // correct — but a black screen with sound reads as a broken player, so name what is happening.
             // Read from whichever engine is on screen; only ever composed when there is no video to lose.
-            val audioOnlyMedia by if (liveOnExo) {
-                liveVm.previewEngine.audioOnlyMedia.collectAsStateWithLifecycle()
-            } else {
-                player.audioOnlyMedia.collectAsStateWithLifecycle()
-            }
+            val audioOnlyMedia by activePlayerEngine.audioOnlyMedia.collectAsStateWithLifecycle()
             if (audioOnlyMedia) {
                 tv.own.owntv.player.AudioOnlyBadge(modifier = Modifier.fillMaxSize(), compact = !isFull)
             }
             // Direct render mode: mpv can't draw subtitles on the decoder-owned surface — the app does.
             // Also drawn docked (F19b): the mini-player is a real watching mode for a subtitled film, and
             // dropping the only line of dialogue there made subtitles look broken. Scaled to the box.
-            if (!liveOnExo) {
+            if (!liveOnExo && !liveOnMulticast) {
                 tv.own.owntv.player.SubtitleOverlay(
                     player = player, modifier = Modifier.fillMaxSize(),
                     // Tied to the chosen mini size, but nudged up and floored: a strictly proportional
@@ -1308,7 +1329,9 @@ fun OwnTVShell(
             if (isFull && !autoFrameRate && !afrPrompted) {
                 // Frame rate of whichever engine is on screen. On the mpv side this is what the direct
                 // path judders on; on Exo it now survives "Measured stream stats" being off (F14).
-                val activeFps by if (liveOnExo) {
+                val activeFps by if (liveOnMulticast) {
+                    liveVm.multicastEngine.videoFps.collectAsStateWithLifecycle()
+                } else if (liveOnExo) {
                     liveVm.previewEngine.videoFps.collectAsStateWithLifecycle()
                 } else {
                     player.videoFps.collectAsStateWithLifecycle()
@@ -1331,7 +1354,7 @@ fun OwnTVShell(
             if (isFull) {
                 // Engine state still distinguishes the live edge from catch-up/archive playback for
                 // controls such as direct number tuning. It must not gate the physical CH keys below.
-                val isLiveStream = liveOnExo || player.isLiveContent
+                val isLiveStream = liveOnMulticast || liveOnExo || player.isLiveContent
                 // Dedicated CH+/CH- belong to a Live TV/catch-up player for its whole lifetime. Do not
                 // derive this callback from the active engine or current list readiness: both legitimately
                 // go through short false/empty windows during startup and ExoPlayer/mpv handoffs. Browse
@@ -1346,7 +1369,7 @@ fun OwnTVShell(
                 // re-tune the live stream and jump the user to the current programme.
                 val isTunedLive = isLiveChannel && !catchupActive
                 PlayerHud(
-                    player = if (liveOnExo) liveVm.previewEngine else mpvEngine, // HUD drives the active engine
+                    player = activePlayerEngine, // HUD drives the active engine
                     onBack = exitPlayer,
                     onPip = dockPlayer, // PiP/dock works for live on either engine now
                     onAudioMode = toAudioMode,
@@ -1389,7 +1412,7 @@ fun OwnTVShell(
                     directTuneContextKey = previewChannel?.id ?: 0L,
                     // Show the ACTUAL running engine (mpv when pinned OR auto-fallen-back), not just the pin —
                     // otherwise an auto-fallback to mpv still read "EXO". true = on mpv (pill shows MPV, teal).
-                    compatMode = if (isTunedLive) !liveOnExo else null,
+                    compatMode = if (isTunedLive) !liveOnExo && !liveOnMulticast else null,
                     // Hidden while rewound into the archive (same `!timeshifted` rule direct
                     // tune follows above): switching engine restarts the channel at the live edge, which
                     // threw the user out of the rewind with the HUD still counting "behind live".
@@ -1522,7 +1545,7 @@ fun OwnTVShell(
                 }
             } else {
                 MiniPlayer(
-                    player = if (liveOnExo) liveVm.previewEngine else mpvEngine,
+                    player = activePlayerEngine,
                     onExpand = expandPlayer,
                     onClose = exitPlayer,
                     onCycleSize = { scope.launch { settingsRepo.setMiniPlayerSizePct(tv.own.owntv.core.player.MiniPlayerSize.next(miniSizePct)) } },

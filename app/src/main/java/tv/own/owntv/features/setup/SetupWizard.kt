@@ -77,6 +77,7 @@ import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.features.settings.EpgSyncDialog
 import tv.own.owntv.features.settings.RemoteBackupRestoreScreen
 import tv.own.owntv.features.settings.SetupLocalSyncScreen
+import tv.own.owntv.features.settings.SolconTvPlusAccountScreen
 import tv.own.owntv.ui.components.StorageBrowser
 import tv.own.owntv.ui.components.dialogPanel
 import tv.own.owntv.ui.components.modalScrim
@@ -88,7 +89,7 @@ import tv.own.owntv.ui.components.summaryText
 import tv.own.owntv.ui.components.warningText
 import tv.own.owntv.ui.theme.OwnTVTheme
 
-private enum class Step { WELCOME, DISPLAY_SIZE, DISCLAIMER, SETUP_CHOICE, SYNC_DEVICE, CREATE_PROFILE, ADD_CONTENT, ADD_SOURCE_CHOOSER, ADD_SOURCE_REMOTE, ADD_SOURCE, IMPORTING, EXISTING, IMPORT_BACKUP_CHOOSER, IMPORT_BACKUP_REMOTE, IMPORT_BACKUP }
+private enum class Step { WELCOME, DISPLAY_SIZE, DISCLAIMER, SETUP_CHOICE, SYNC_DEVICE, CREATE_PROFILE, ADD_CONTENT, ADD_SOURCE_CHOOSER, ADD_SOURCE_REMOTE, ADD_SOURCE_SOLCON, ADD_SOURCE, IMPORTING, EXISTING, IMPORT_BACKUP_CHOOSER, IMPORT_BACKUP_REMOTE, IMPORT_BACKUP }
 
 /**
  * Onboarding for one profile. [firstRun] shows language/welcome/disclaimer; otherwise it starts at profile
@@ -154,8 +155,13 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
             )
             Step.ADD_SOURCE_CHOOSER -> AddSourceChooserScreen(
                 onRemote = { step = Step.ADD_SOURCE_REMOTE },
+                onSolcon = { step = Step.ADD_SOURCE_SOLCON },
                 onManual = { step = Step.ADD_SOURCE },
                 onBack = { step = Step.ADD_CONTENT },
+            )
+            Step.ADD_SOURCE_SOLCON -> SolconTvPlusAccountScreen(
+                onBack = { step = Step.ADD_SOURCE_CHOOSER },
+                onSynchronized = { vm.finish(onDone) },
             )
             Step.ADD_SOURCE_REMOTE -> RemoteSetupScreen(
                 state = vm.remoteState.collectAsStateWithLifecycle().value,
