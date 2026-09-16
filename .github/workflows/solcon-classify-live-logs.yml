@@ -29,11 +29,12 @@ jobs:
             --path app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt \
             --text 'Solcon TV+ playback failed (${resolved.category.name})' \
             --category log
-      - name: Verify only the manifest changed
+      - name: Verify only i18n inventory changed
         run: |
           git diff --check
-          git diff -- tools/i18n/safe_literals.txt
-          test "$(git diff --name-only | tr '\n' ' ')" = 'tools/i18n/safe_literals.txt '
+          git diff -- tools/i18n/safe_literals.txt tools/i18n/hardcoded_baseline.txt
+          changed="$(git diff --name-only | sort | tr '\n' ' ')"
+          test "$changed" = 'tools/i18n/hardcoded_baseline.txt tools/i18n/safe_literals.txt '
       - name: Commit classification
         run: |
           if git diff --quiet; then
@@ -42,6 +43,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/i18n/safe_literals.txt
+          git add tools/i18n/safe_literals.txt tools/i18n/hardcoded_baseline.txt
           git commit -m 'chore: classify Solcon playback diagnostics as logs'
           git push origin HEAD:feat/solcon-tv
