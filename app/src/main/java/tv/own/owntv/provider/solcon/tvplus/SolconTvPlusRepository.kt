@@ -128,6 +128,7 @@ class SolconTvPlusRepository(
             }
         }
         sourceDao.markSynced(sourceId, System.currentTimeMillis())
+        if (settings.currentDefaultSourceId() == null) settings.setDefaultSource(sourceId)
         SyncSummary(
             channels = channels.size,
             radioChannels = channels.count { it.radio },

@@ -133,6 +133,7 @@ class LiveViewModel(
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
     val multicastEngine: tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine,
+    private val solconTvPlusRepository: tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -884,6 +885,15 @@ class LiveViewModel(
         // (preview audio is off) — so full-screen would play with no sound. ensurePlaying() sets liveOnExo
         // the instant OK is pressed, before this can run.
         if (_liveOnExo.value) return
+        if (tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl).isTvPlus) {
+            stalkerPreviewJob?.cancel()
+            stalkerPreviewJob = viewModelScope.launch {
+                val resolved = resolveSolconPlayback(channel) ?: return@launch
+                if (_liveOnExo.value) return@launch
+                playPreview(resolved)
+            }
+            return
+        }
         val source = sourceById[channel.sourceId]
         if (streamUrlResolver.needsResolve(source)) { playPreviewStalker(channel, source!!); return }
         val targetUrl = tuneUrl(channel, source)
@@ -968,6 +978,13 @@ class LiveViewModel(
      * grid would drift the first time one of them changed.
      */
     fun tuneTile(engine: tv.own.owntv.player.LivePreviewEngine, channel: ChannelEntity, muted: Boolean) {
+        if (tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl).isTvPlus) {
+            viewModelScope.launch {
+                val resolved = resolveSolconPlayback(channel) ?: return@launch
+                tuneTile(engine, resolved, muted)
+            }
+            return
+        }
         val source = sourceById[channel.sourceId]
         val meta = tv.own.owntv.player.MediaMeta(
             title = channel.name,
@@ -1432,21 +1449,23 @@ class LiveViewModel(
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
             if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return@launch
-            val source = withContext(Dispatchers.IO) { sourceDao.getById(channel.sourceId) }
+            val playableChannel = resolveSolconPlayback(channel) ?: return@launch
+            if (playableChannel.drmConfig != null) return@launch
+            val source = withContext(Dispatchers.IO) { sourceDao.getById(playableChannel.sourceId) }
             val url = if (streamUrlResolver.needsResolve(source)) {
                 withContext(Dispatchers.IO) {
-                    runCatching { streamUrlResolver.resolve(source!!, channel.streamUrl) }
+                    runCatching { streamUrlResolver.resolve(source!!, playableChannel.streamUrl) }
                         .onFailure { Log.w(TAG, "stalker resolve failed channelId=${channel.id}", it) }
                         .getOrNull()
                 } ?: return@launch
             } else {
-                channel.streamUrl
+                playableChannel.streamUrl
             }
             externalPlayerLauncher.launch(
                 url = url,
-                title = channel.name,
+                title = playableChannel.name,
                 userAgent = source?.userAgent,
-                httpHeaders = channel.httpHeaders,
+                httpHeaders = playableChannel.httpHeaders,
             )
             recordLiveHistory(channel, immediate = true)
         }
@@ -1487,12 +1506,33 @@ class LiveViewModel(
      *  and rebuilt the stream from scratch instead of promoting the one already playing. */
     private var forceTsForExo: String? = null
 
+    /** Resolve a Solcon TV+ channel just before playback without persisting the signed result. */
+    private suspend fun resolveSolconPlayback(channel: ChannelEntity): ChannelEntity? {
+        if (!tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl).isTvPlus) return channel
+        return when (val resolved = solconTvPlusRepository.resolveLive(channel)) {
+            is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Ready -> channel.copy(
+                streamUrl = resolved.url,
+                httpHeaders = resolved.httpHeaders,
+                drmConfig = resolved.drmConfig,
+            )
+            is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Unsupported -> {
+                engineLog(resolved.reason)
+                null
+            }
+            is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Failed -> {
+                engineLog(resolved.reason)
+                null
+            }
+        }
+    }
+
     /** Internal playback: the canonical ExoPlayer / mpv / Stalker / history side-effects for a
      *  channel. Direct-tune's background rebuild path calls this without cancelling the rebuild
      *  so the in-flight rebuild it owns isn't killed by its own play. */
-    private suspend fun playChannel(channel: ChannelEntity) {
+    private suspend fun playChannel(originalChannel: ChannelEntity) {
         val pid = currentProfileId() ?: return
-        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return
+        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, originalChannel.categoryId, profileDao, categoryDao)) return
+        val channel = resolveSolconPlayback(originalChannel) ?: return
         // Live TV set to play externally: hand the channel over instead of tuning an in-app engine.
         // History is still recorded, so the channel shows up in History/Recently watched either way.
         // #115 — a protected channel stays in-app whatever this setting says: no standard intent extra
