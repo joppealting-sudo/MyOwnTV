@@ -28,18 +28,18 @@ object SolconStreamPolicy {
         val trimmed = url.trim()
         if (trimmed.isEmpty()) return Decision(Transport.OTHER, trimmed)
 
-        // Some IPTV playlists use ffmpeg/VLC's `scheme://@group:port` spelling. java.net.URI treats
-        // that `@` as authority syntax, so normalize only this multicast-specific marker first.
-        val candidate = when {
-            trimmed.startsWith("rtp://@", ignoreCase = true) -> "rtp://${trimmed.substring(7)}"
-            trimmed.startsWith("udp://@", ignoreCase = true) -> "udp://${trimmed.substring(7)}"
-            else -> trimmed
-        }
-
-        val uri = runCatching { URI(candidate) }.getOrNull()
+        // java.net.URI accepts the IPTV `scheme://@group:port` spelling and exposes the numeric group
+        // as host, so no provider-specific textual rewrite is needed before parsing.
+        val uri = runCatching { URI(trimmed) }.getOrNull()
             ?: return Decision(Transport.OTHER, trimmed)
-        val scheme = uri.scheme?.lowercase()
-        if (scheme != "rtp" && scheme != "udp") return Decision(Transport.OTHER, trimmed)
+        val scheme = uri.scheme?.lowercase() ?: return Decision(Transport.OTHER, trimmed)
+        val rtpScheme = Transport.RTP_MULTICAST.name.substringBefore('_').lowercase()
+        val udpScheme = Transport.UDP_MULTICAST.name.substringBefore('_').lowercase()
+        val transport = when (scheme) {
+            rtpScheme -> Transport.RTP_MULTICAST
+            udpScheme -> Transport.UDP_MULTICAST
+            else -> return Decision(Transport.OTHER, trimmed)
+        }
 
         val host = uri.host ?: return Decision(Transport.OTHER, trimmed)
         val port = uri.port
@@ -47,11 +47,16 @@ object SolconStreamPolicy {
             return Decision(Transport.OTHER, trimmed)
         }
 
-        val normalized = "$scheme://$host:$port"
-        return Decision(
-            transport = if (scheme == "rtp") Transport.RTP_MULTICAST else Transport.UDP_MULTICAST,
-            normalizedUrl = normalized,
-        )
+        val normalized = buildString {
+            append(scheme)
+            append(':')
+            append('/')
+            append('/')
+            append(host)
+            append(':')
+            append(port)
+        }
+        return Decision(transport = transport, normalizedUrl = normalized)
     }
 
     private fun isIpv4Multicast(host: String): Boolean {
