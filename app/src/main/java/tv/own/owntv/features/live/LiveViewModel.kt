@@ -132,6 +132,7 @@ class LiveViewModel(
     private val epgRepository: tv.own.owntv.core.repository.EpgRepository,
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
+    val multicastEngine: tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -886,6 +887,29 @@ class LiveViewModel(
         val source = sourceById[channel.sourceId]
         if (streamUrlResolver.needsResolve(source)) { playPreviewStalker(channel, source!!); return }
         val targetUrl = tuneUrl(channel, source)
+        val multicastDecision = tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(targetUrl)
+        if (multicastDecision.isMulticast) {
+            if (_liveOnMulticast.value) return
+            _previewBlockedSingleSession.value = false
+            previewEngine.stop()
+            _previewOnMulticast.value = true
+            val meta = tv.own.owntv.player.MediaMeta(
+                title = channel.name, subtitle = channelNumberLabel(channel),
+                logoUrl = channel.displayLogoUrl, contentKey = mpvPinKey(channel),
+            )
+            if (multicastEngine.currentUrl == multicastDecision.normalizedUrl &&
+                multicastEngine.state.value != tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.ERROR
+            ) {
+                multicastEngine.setMuted(!livePreviewAudio.value)
+            } else {
+                multicastEngine.play(multicastDecision.normalizedUrl, !livePreviewAudio.value, meta)
+            }
+            return
+        }
+        if (_previewOnMulticast.value) {
+            _previewOnMulticast.value = false
+            multicastEngine.stop()
+        }
         // A one-session panel counts the muted preview as the account's single stream, so previewing while
         // mpv is playing full-screen locks the user's own playback out. Browsing stays silent there.
         if (player.hasActiveStream && LiveStreamQuirks.isSingleSession(targetUrl)) {
@@ -1091,6 +1115,10 @@ class LiveViewModel(
      *  The shell renders the ExoPlayer surface instead of mpv's when this is set. */
     private val _liveOnExo = MutableStateFlow(false)
     val liveOnExo: StateFlow<Boolean> = _liveOnExo.asStateFlow()
+    private val _liveOnMulticast = MutableStateFlow(false)
+    val liveOnMulticast: StateFlow<Boolean> = _liveOnMulticast.asStateFlow()
+    private val _previewOnMulticast = MutableStateFlow(false)
+    val previewOnMulticast: StateFlow<Boolean> = _previewOnMulticast.asStateFlow()
 
     // Apply the "Preview audio" toggle to a preview that is ALREADY playing — it used to take effect only
     // on the next tune, so turning it off left the current channel audible until focus moved. Never while
@@ -1100,7 +1128,11 @@ class LiveViewModel(
     init {
         viewModelScope.launch {
             livePreviewAudio.collect { on ->
-                if (!_liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
+                if (!_liveOnExo.value && !_liveOnMulticast.value && _previewOnMulticast.value && multicastEngine.currentUrl != null) {
+                    multicastEngine.setMuted(!on)
+                } else if (!_liveOnExo.value && previewEngine.currentUrl != null) {
+                    previewEngine.setMuted(!on)
+                }
             }
         }
         viewModelScope.launch { player.archiveEnded.collect { continueAfterCatchup() } }
@@ -1113,6 +1145,18 @@ class LiveViewModel(
      *  pane may re-take the engine (and re-apply the preview mute) on the next focus. Keeps the stream
      *  playing (no stop) — just clears the flag so [playPreview] works again. */
     fun onFullscreenExited() {
+        val wasMulticast = _liveOnMulticast.value
+        _liveOnMulticast.value = false
+        if (wasMulticast) {
+            if (livePreviewEnabled.value) {
+                _previewOnMulticast.value = true
+                multicastEngine.setMuted(!livePreviewAudio.value)
+            } else {
+                multicastOutcomeJob?.cancel()
+                _previewOnMulticast.value = false
+                multicastEngine.stop()
+            }
+        }
         _liveOnExo.value = false
         // Leaving full-screen ends the rewind: the archive stream is torn down with the player, and the
         // 1 Hz "behind live" ticker would otherwise keep running against nothing for the rest of the session.
@@ -1131,6 +1175,10 @@ class LiveViewModel(
     }
 
     fun clearLiveOnExo() {
+        multicastOutcomeJob?.cancel()
+        _liveOnMulticast.value = false
+        _previewOnMulticast.value = false
+        multicastEngine.stop()
         exoOutcomeJob?.cancel()
         stalkerPreviewJob?.cancel()
         stalkerPreviewCmd = null
@@ -1453,6 +1501,23 @@ class LiveViewModel(
         _previewChannel.value = channel
         clearTimeshift() // normal live = not timeshifted
         _catchupActive.value = false // tuning live ends any archive playback the HUD was showing
+        val multicastRoute = tv.own.owntv.provider.solcon.SolconPlaybackRoute.decide(
+            channel.streamUrl, forceMpv = enginePin(channel) == true,
+        )
+        if (multicastRoute != tv.own.owntv.provider.solcon.SolconPlaybackRoute.Target.EXISTING && channel.drmConfig == null) {
+            if (multicastRoute == tv.own.owntv.provider.solcon.SolconPlaybackRoute.Target.MEDIA3_MULTICAST) {
+                startOnMulticast(channel)
+            } else {
+                multicastOutcomeJob?.cancel()
+                _liveOnExo.value = false
+                _liveOnMulticast.value = false
+                _previewOnMulticast.value = false
+                multicastEngine.stop()
+                startOnMpv(channel, multicastRoute.name)
+            }
+            recordLiveHistory(channel)
+            return
+        }
         // Three inputs, in descending authority: what the user pinned for THIS channel, the engine
         // setting, and what the app has learned about the panel.
         // The setting itself resolves per-item pin → per-playlist → global: a playlist override replaces
@@ -1574,7 +1639,70 @@ class LiveViewModel(
         return LiveStreamQuirks.refusesSegments(channel.playStreamUrl(source))
     }
 
+
+    private var multicastOutcomeJob: Job? = null
+
+    private suspend fun startOnMulticast(channel: ChannelEntity) {
+        val decision = tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl)
+        if (!decision.isMulticast) return
+        exoOutcomeJob?.cancel()
+        mpvOutcomeJob?.cancel()
+        _liveOnExo.value = false
+        _liveOnMulticast.value = true
+        _previewOnMulticast.value = true
+        previewEngine.stop()
+        if (player.hasActiveStream) {
+            player.stopAndAwaitRelease()
+            delay(tv.own.owntv.player.OwnTVPlayer.SURFACE_HANDOFF_MS)
+            if (_previewChannel.value?.streamUrl != channel.streamUrl) return
+        }
+        val meta = tv.own.owntv.player.MediaMeta(
+            title = channel.name, subtitle = channelNumberLabel(channel),
+            logoUrl = channel.displayLogoUrl, contentKey = mpvPinKey(channel),
+        )
+        if (multicastEngine.currentUrl == decision.normalizedUrl &&
+            multicastEngine.state.value != tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.ERROR
+        ) {
+            multicastEngine.setMuted(false)
+        } else {
+            multicastEngine.play(decision.normalizedUrl, false, meta)
+        }
+        watchMulticastOutcome(channel)
+    }
+
+    private fun watchMulticastOutcome(channel: ChannelEntity) {
+        multicastOutcomeJob?.cancel()
+        multicastOutcomeJob = viewModelScope.launch {
+            val opened = kotlinx.coroutines.withTimeoutOrNull(MULTICAST_OPEN_TIMEOUT_MS) {
+                combine(multicastEngine.state, multicastEngine.error) { state, error ->
+                    when {
+                        state == tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.PLAYING -> true
+                        state == tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.ERROR || error != null -> false
+                        else -> null
+                    }
+                }.first { it != null }
+            }
+            if (!isStillOnMulticast(channel)) return@launch
+            if (opened == true) return@launch
+            _liveOnMulticast.value = false
+            _previewOnMulticast.value = false
+            multicastEngine.stop()
+            fallbackToMpv(
+                channel,
+                tv.own.owntv.provider.solcon.SolconPlaybackRoute.Target.MPV_MULTICAST.name,
+                forceTs = true,
+            )
+        }
+    }
+
+    private fun isStillOnMulticast(channel: ChannelEntity): Boolean =
+        _liveOnMulticast.value && _previewChannel.value?.streamUrl == channel.streamUrl
+
     private suspend fun startOnExo(channel: ChannelEntity) {
+        multicastOutcomeJob?.cancel()
+        _liveOnMulticast.value = false
+        _previewOnMulticast.value = false
+        multicastEngine.stop()
         mpvOutcomeJob?.cancel() // ExoPlayer owns the channel now
         _liveOnExo.value = true
         player.stop() // free mpv (decoder/connection) if a previous full-screen used it
@@ -1656,6 +1784,28 @@ class LiveViewModel(
         // trade a playing channel for a guaranteed failure, so the toggle does nothing here; the HUD
         // hides it for such a channel, and this is the belt-and-braces guard.
         if (channel.drmConfig != null) return
+        if (tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl).isMulticast) {
+            val goToMpv = _liveOnMulticast.value || _previewOnMulticast.value
+            viewModelScope.launch {
+                val key = mpvPinKey(channel)
+                forceMpvStore.pin(key ?: channel.streamUrl, goToMpv)
+                if (key != null) forceMpvStore.forget(channel.streamUrl)
+                if (goToMpv) {
+                    multicastOutcomeJob?.cancel()
+                    _liveOnMulticast.value = false
+                    _previewOnMulticast.value = false
+                    multicastEngine.stop()
+                    fallbackToMpv(
+                        channel,
+                        tv.own.owntv.provider.solcon.SolconPlaybackRoute.Target.MPV_MULTICAST.name,
+                        forceTs = true,
+                    )
+                } else {
+                    startOnMulticast(channel)
+                }
+            }
+            return
+        }
         // Base the swap on the ACTUAL running engine, not the pin: after an auto-fallback to mpv the channel
         // runs on mpv while still unpinned, and the old pin-based logic then did nothing on click. Keying off
         // _liveOnExo makes every click flip the live engine, with the pin following the choice.
@@ -1895,6 +2045,10 @@ class LiveViewModel(
     private var mpvHandoffJob: Job? = null
 
     private suspend fun fallbackToMpv(channel: ChannelEntity, reason: String, forceTs: Boolean = false) {
+        multicastOutcomeJob?.cancel()
+        _liveOnMulticast.value = false
+        _previewOnMulticast.value = false
+        multicastEngine.stop()
         engineLog("starting mpv for '${channel.name}' — reason=$reason")
         clearTimeshift() // the live channel is being re-opened at the edge — the rewind is over
         // Preserve the format Exo actually discovered. Some panels redirect their advertised `.ts`
@@ -1996,7 +2150,7 @@ class LiveViewModel(
 
     /** mpv's counterpart to [isStill] — still the same channel, and mpv still owns the screen. */
     private fun isStillOnMpv(channel: ChannelEntity) =
-        !_liveOnExo.value && _previewChannel.value?.streamUrl == channel.streamUrl
+        !_liveOnExo.value && !_liveOnMulticast.value && _previewChannel.value?.streamUrl == channel.streamUrl
 
     private var historyJob: Job? = null
 
@@ -2267,6 +2421,10 @@ class LiveViewModel(
     }
 
     fun stopPreview() {
+        multicastOutcomeJob?.cancel()
+        _liveOnMulticast.value = false
+        _previewOnMulticast.value = false
+        multicastEngine.stop()
         setStalkerReconnect(null) // tearing down — no reconnect re-resolve should fire
         ladderOpened() // nothing is tuning any more; the opening alarm must not fire on a torn-down channel
         previewEngine.stop()
@@ -2436,6 +2594,7 @@ class LiveViewModel(
          *  (10s) plus a retry and a format alternate underneath this one, and cutting in before that
          *  finishes would throw away attempts that often succeed. */
         const val MPV_OPEN_TIMEOUT_MS = 35_000L
+        const val MULTICAST_OPEN_TIMEOUT_MS = 10_000L
 
     }
 }

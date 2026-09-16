@@ -152,6 +152,7 @@ fun LiveScreen(
     val previewChannel by vm.previewChannel.collectAsStateWithLifecycle()
     val previewCategoryName by vm.previewCategoryName.collectAsStateWithLifecycle()
     val previewArmed by vm.previewArmed.collectAsStateWithLifecycle()
+    val previewOnMulticast by vm.previewOnMulticast.collectAsStateWithLifecycle()
     val previewBlockedSingleSession by vm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val nowNext by vm.nowNext.collectAsStateWithLifecycle()
     val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
@@ -665,6 +666,8 @@ fun LiveScreen(
                     categoryName = previewCategoryName,
                     nowNext = nowNext,
                     previewEngine = vm.previewEngine,
+                    multicastEngine = vm.multicastEngine,
+                    previewOnMulticast = previewOnMulticast,
                     showVideo = effectivePreview,
                     singleSessionBlocked = previewBlockedSingleSession,
                 )
@@ -1079,17 +1082,31 @@ private fun LivePreviewPane(
     categoryName: String?,
     nowNext: EpgNowNext?,
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
+    multicastEngine: tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine,
+    previewOnMulticast: Boolean,
     showVideo: Boolean,
     singleSessionBlocked: Boolean = false,
 ) {
     val colors = OwnTVTheme.colors
-    val previewState by previewEngine.state.collectAsStateWithLifecycle()
-    val previewHeight by previewEngine.videoHeight.collectAsStateWithLifecycle()
-    val streamChips by previewEngine.streamChips.collectAsStateWithLifecycle()
-    // Show the ExoPlayer surface once it's playing/buffering; on ERROR fall back to the channel logo.
-    val previewPlaying = showVideo && previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
-        previewState != tv.own.owntv.player.LivePreviewEngine.State.IDLE
-    val previewLoading = showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
+    val exoPreviewState by previewEngine.state.collectAsStateWithLifecycle()
+    val exoPreviewHeight by previewEngine.videoHeight.collectAsStateWithLifecycle()
+    val exoStreamChips by previewEngine.streamChips.collectAsStateWithLifecycle()
+    val multicastState by multicastEngine.state.collectAsStateWithLifecycle()
+    val multicastHeight by multicastEngine.videoHeight.collectAsStateWithLifecycle()
+    val previewHeight = if (previewOnMulticast) multicastHeight else exoPreviewHeight
+    val streamChips = if (previewOnMulticast) emptyList() else exoStreamChips
+    val previewPlaying = if (previewOnMulticast) {
+        showVideo && multicastState != tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.ERROR &&
+            multicastState != tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.IDLE
+    } else {
+        showVideo && exoPreviewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
+            exoPreviewState != tv.own.owntv.player.LivePreviewEngine.State.IDLE
+    }
+    val previewLoading = if (previewOnMulticast) {
+        showVideo && multicastState == tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine.State.LOADING
+    } else {
+        showVideo && exoPreviewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
+    }
     val videoRes = previewHeight?.let { "${it}p" }
     if (channel == null) {
         PreviewPane(hint = stringResource(R.string.content_focus_channel))
@@ -1113,7 +1130,13 @@ private fun LivePreviewPane(
                 OwnTVIcon(OwnTVIcon.LIVE_TV, tint = colors.onSurfaceVariant, modifier = Modifier.size(56.dp))
             }
             if (previewPlaying) {
-                tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+                if (previewOnMulticast) {
+                    tv.own.owntv.provider.solcon.multicast.SolconMulticastSurface(
+                        engine = multicastEngine, modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+                }
             }
             if (previewLoading) {
                 OwnTVSpinner(sizeDp = 28)
