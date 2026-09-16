@@ -88,7 +88,7 @@ class SolconTvPlusViewModel(
             .onSuccess { _state.value = UiState.Connected(it) }
             .onFailure { failure ->
                 _state.value = if (repository.isLoggedIn()) UiState.Connected() else UiState.SignedOut
-                _error.value = if (failure.message?.contains("no subscribed channels", ignoreCase = true) == true) {
+                _error.value = if (failure is SolconTvPlusRepository.EmptyCatalogException) {
                     ErrorKind.EMPTY_CATALOG
                 } else {
                     ErrorKind.NETWORK
