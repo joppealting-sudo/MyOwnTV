@@ -52,4 +52,6 @@
     <string name="solcon_tvplus_route_widevine">Last playback: Widevine</string>
     <string name="solcon_tvplus_playback_session_expired">The Solcon TV+ session expired. Sign in again.</string>
     <string name="solcon_tvplus_playback_unsupported">This protected Solcon TV+ channel is not supported by MyOwnTV.</string>
+    <string name="solcon_tvplus_source_type">Solcon TV+</string>
+    <string name="solcon_tvplus_manage_source">Account &amp; sync</string>
 </resources>
