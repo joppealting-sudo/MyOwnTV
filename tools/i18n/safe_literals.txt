@@ -121,6 +121,8 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LIVE
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	Solcon TV+ playback failed (${resolved.category.name})
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	Solcon TV+ playback unavailable (${resolved.category.name})
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	engine toggle '${channel.name}' -> ${if (goToMpv) "mpv" else "exoplayer"} (currentlyOnExo=${_liveOnExo.value})
