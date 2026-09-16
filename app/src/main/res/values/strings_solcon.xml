@@ -39,4 +39,17 @@
     <string name="solcon_tvplus_radio_category">Radio</string>
     <string name="solcon_tvplus_source_name">Solcon TV+</string>
     <string name="solcon_tvplus_security_note">Your PIN is used only to create a Solcon TV+ device session. It is not stored after login.</string>
+    <string name="solcon_tvplus_status_title">Provider status</string>
+    <string name="solcon_tvplus_last_sync_time">Last sync: %1$s</string>
+    <string name="solcon_tvplus_cached_summary">Cached: %1$s, %2$s and %3$s.</string>
+    <string name="solcon_tvplus_epg_complete">EPG sync complete</string>
+    <string name="solcon_tvplus_epg_partial">EPG sync partial</string>
+    <string name="solcon_tvplus_discovery_discovered">API endpoint discovered automatically</string>
+    <string name="solcon_tvplus_discovery_default">Using Solcon’s standard API endpoint</string>
+    <string name="solcon_tvplus_discovery_compat">Using Solcon’s compatibility API endpoint</string>
+    <string name="solcon_tvplus_route_clear">Last playback: standard stream</string>
+    <string name="solcon_tvplus_route_multicast">Last playback: multicast</string>
+    <string name="solcon_tvplus_route_widevine">Last playback: Widevine</string>
+    <string name="solcon_tvplus_playback_session_expired">The Solcon TV+ session expired. Sign in again.</string>
+    <string name="solcon_tvplus_playback_unsupported">This protected Solcon TV+ channel is not supported by MyOwnTV.</string>
 </resources>

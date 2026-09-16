@@ -27,6 +27,7 @@ class SolconTvPlusViewModel(
         if (repository.isLoggedIn()) UiState.Connected() else UiState.SignedOut,
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
+    val diagnostics = repository.diagnosticsState
 
     private val _error = MutableStateFlow<ErrorKind?>(null)
     val error: StateFlow<ErrorKind?> = _error.asStateFlow()

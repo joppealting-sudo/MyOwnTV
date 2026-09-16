@@ -25,6 +25,7 @@ spec.loader.exec_module(checker)
 APPROVED_TECHNICAL_FILES = {
     "app/src/main/java/tv/own/owntv/features/settings/SolconSettingsRoute.kt": "technical",
     "app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt": "protocol",
+    "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt": "technical",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt": "technical",

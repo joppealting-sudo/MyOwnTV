@@ -24,20 +24,32 @@ class SolconTvPlusClient(
 
     val isLoggedIn: Boolean get() = sessions.isLoggedIn()
     val deviceId: String get() = sessions.deviceId()
+    var lastDiscoveryResult: SolconDiagnostics.DiscoveryResult? = null
+        private set
 
     suspend fun login(subscriptionNumber: String, pin: String): LoginResult = withContext(Dispatchers.IO) {
         if (subscriptionNumber.isBlank() || pin.isBlank()) {
             return@withContext LoginResult.Failure(FailureReason.INVALID_CREDENTIALS, "Missing credentials")
         }
-        val discovered = discoverApiRoot() ?: SolconTvPlusProtocol.DEFAULT_API_ROOT
+        val discovered = discoverApiRoot()
+        val primaryRoot = discovered ?: SolconTvPlusProtocol.DEFAULT_API_ROOT
+        val primaryDiscovery = if (discovered != null) {
+            SolconDiagnostics.DiscoveryResult.DISCOVERED
+        } else {
+            SolconDiagnostics.DiscoveryResult.DEFAULT_FALLBACK
+        }
         val attempts = listOf(
-            discovered to SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV,
-            discovered to SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
-            SolconTvPlusProtocol.COMPAT_API_ROOT to SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
-        ).distinct()
+            Triple(primaryRoot, SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV, primaryDiscovery),
+            Triple(primaryRoot, SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV, primaryDiscovery),
+            Triple(
+                SolconTvPlusProtocol.COMPAT_API_ROOT,
+                SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
+                SolconDiagnostics.DiscoveryResult.COMPAT_FALLBACK,
+            ),
+        ).distinctBy { it.first to it.second }
 
         var lastProtocol: String? = null
-        for ((root, flavor) in attempts) {
+        for ((root, flavor, discoveryResult) in attempts) {
             val response = runCatching {
                 post(
                     SolconTvPlusProtocol.loginUrl(root),
@@ -61,6 +73,7 @@ class SolconTvPlusClient(
             }
             when (val parsed = SolconTvPlusProtocol.parseLoginResponse(response.body, response.cookieHeader)) {
                 is SolconTvPlusProtocol.LoginParse.Success -> {
+                    lastDiscoveryResult = discoveryResult
                     sessions.save(root, parsed.session)
                     return@withContext LoginResult.Success(requireNotNull(sessions.load()))
                 }

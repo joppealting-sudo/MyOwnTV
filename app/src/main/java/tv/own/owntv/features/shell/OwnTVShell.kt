@@ -45,6 +45,7 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -229,6 +230,22 @@ fun OwnTVShell(
     // up/down (CH+/CH-). Guide tunes start through LiveViewModel too (they set zapSource = LIVE_TV), so
     // there is exactly ONE zap path: liveVm's. The Guide keeps its own EpgViewModel only for the grid.
     val liveVm = org.koin.androidx.compose.koinViewModel<LiveViewModel>()
+    val solconSessionExpired = stringResource(R.string.solcon_tvplus_playback_session_expired)
+    val solconProtectedUnsupported = stringResource(R.string.solcon_tvplus_playback_unsupported)
+    val solconPlaybackFailed = stringResource(R.string.solcon_tvplus_error_playback)
+    val solconNetworkFailed = stringResource(R.string.solcon_tvplus_error_network)
+    LaunchedEffect(liveVm) {
+        liveVm.solconPlaybackError.collect { category ->
+            localSubToast.show(
+                when (category) {
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED -> solconSessionExpired
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.PROTECTED_UNSUPPORTED -> solconProtectedUnsupported
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NETWORK -> solconNetworkFailed
+                    else -> solconPlaybackFailed
+                },
+            )
+        }
+    }
     val epgVm = org.koin.androidx.compose.koinViewModel<tv.own.owntv.features.epg.EpgViewModel>()
     val liveCanZap by liveVm.canZap.collectAsStateWithLifecycle()
     // Full-screen is running on the ExoPlayer engine (a promoted Live preview) rather than mpv.

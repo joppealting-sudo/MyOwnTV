@@ -25,6 +25,7 @@ class SolconTvPlusRepository(
     private val channelDao: ChannelDao,
     private val epgDao: EpgDao,
     private val settings: SettingsRepository,
+    private val diagnostics: SolconDiagnostics,
 ) {
     class EmptyCatalogException : IllegalStateException("Solcon TV+ returned no subscribed channels")
 
@@ -41,22 +42,50 @@ class SolconTvPlusRepository(
             val httpHeaders: String?,
             val drmConfig: String?,
         ) : ResolvedPlayback
-        data class Unsupported(val reason: String) : ResolvedPlayback
-        data class Failed(val reason: String) : ResolvedPlayback
+        data class Unsupported(
+            val category: SolconDiagnostics.ErrorCategory,
+            val reason: String,
+        ) : ResolvedPlayback
+        data class Failed(
+            val category: SolconDiagnostics.ErrorCategory,
+            val reason: String,
+        ) : ResolvedPlayback
+    }
+
+    val diagnosticsState = diagnostics.state
+
+    init {
+        diagnostics.setSessionAuthenticated(client.isLoggedIn)
     }
 
     fun isLoggedIn(): Boolean = client.isLoggedIn
 
-    suspend fun login(subscriptionNumber: String, pin: String): SolconTvPlusClient.LoginResult =
-        client.login(subscriptionNumber, pin)
+    suspend fun login(subscriptionNumber: String, pin: String): SolconTvPlusClient.LoginResult {
+        val result = client.login(subscriptionNumber, pin)
+        when (result) {
+            is SolconTvPlusClient.LoginResult.Success -> {
+                diagnostics.setSessionAuthenticated(true)
+                client.lastDiscoveryResult?.let(diagnostics::recordDiscovery)
+            }
+            is SolconTvPlusClient.LoginResult.Failure -> {
+                diagnostics.setSessionAuthenticated(false)
+                diagnostics.recordError(result.reason.toDiagnosticsCategory())
+            }
+        }
+        return result
+    }
 
-    fun logout() = client.logout()
+    fun logout() {
+        client.logout()
+        diagnostics.setSessionAuthenticated(false)
+    }
 
     suspend fun sync(
         sourceName: String,
         tvCategoryName: String,
         radioCategoryName: String,
-    ): Result<SyncSummary> = runCatching {
+    ): Result<SyncSummary> {
+        val result = runCatching {
         val channels = client.liveChannels().getOrThrow()
         if (channels.isEmpty()) throw EmptyCatalogException()
         val profileId = settings.activeProfileIdNow()
@@ -135,36 +164,83 @@ class SolconTvPlusRepository(
             programmes = programmes,
             epgComplete = epgComplete,
         )
+        }
+        result.onSuccess { summary ->
+            diagnostics.recordSync(
+                tvChannels = summary.channels - summary.radioChannels,
+                radioChannels = summary.radioChannels,
+                programmes = summary.programmes,
+                epgComplete = summary.epgComplete,
+            )
+        }.onFailure { failure ->
+            diagnostics.recordError(
+                when (failure) {
+                    is EmptyCatalogException -> SolconDiagnostics.ErrorCategory.EMPTY_CATALOG
+                    is SolconTvPlusClient.NotAuthenticatedException -> SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED
+                    else -> SolconDiagnostics.ErrorCategory.NETWORK
+                },
+            )
+        }
+        return result
     }
 
     suspend fun resolveLive(channel: ChannelEntity): ResolvedPlayback {
-        val id = SolconStreamPolicy.tvPlusLiveId(channel.streamUrl)
-            ?: return ResolvedPlayback.Failed("Invalid Solcon TV+ channel reference")
+        val id = SolconStreamPolicy.tvPlusLiveId(channel.streamUrl) ?: run {
+            val category = SolconDiagnostics.ErrorCategory.PROTOCOL
+            diagnostics.recordError(category)
+            return ResolvedPlayback.Failed(category, "Invalid Solcon TV+ channel reference")
+        }
         return client.resolveLivePlayback(id).fold(
             onSuccess = { playback ->
                 when (playback) {
-                    is SolconTvPlusProtocol.Playback.Clear -> ResolvedPlayback.Ready(
-                        url = playback.url,
-                        httpHeaders = StreamHeaders.encode(playback.streamHeaders),
-                        drmConfig = null,
-                    )
-                    is SolconTvPlusProtocol.Playback.Widevine -> ResolvedPlayback.Ready(
-                        url = playback.url,
-                        httpHeaders = StreamHeaders.encode(playback.streamHeaders),
-                        drmConfig = DrmConfig.encode(
-                            DrmConfig(
-                                scheme = DrmConfig.Scheme.WIDEVINE,
-                                licenseUrl = playback.licenseUrl,
-                                headers = playback.licenseHeaders,
+                    is SolconTvPlusProtocol.Playback.Clear -> {
+                        val route = if (SolconStreamPolicy.classify(playback.url).isMulticast) {
+                            SolconDiagnostics.PlaybackRoute.MULTICAST
+                        } else {
+                            SolconDiagnostics.PlaybackRoute.CLEAR_HTTP
+                        }
+                        diagnostics.recordPlaybackRoute(route)
+                        ResolvedPlayback.Ready(
+                            url = playback.url,
+                            httpHeaders = StreamHeaders.encode(playback.streamHeaders),
+                            drmConfig = null,
+                        )
+                    }
+                    is SolconTvPlusProtocol.Playback.Widevine -> {
+                        diagnostics.recordPlaybackRoute(SolconDiagnostics.PlaybackRoute.WIDEVINE)
+                        ResolvedPlayback.Ready(
+                            url = playback.url,
+                            httpHeaders = StreamHeaders.encode(playback.streamHeaders),
+                            drmConfig = DrmConfig.encode(
+                                DrmConfig(
+                                    scheme = DrmConfig.Scheme.WIDEVINE,
+                                    licenseUrl = playback.licenseUrl,
+                                    headers = playback.licenseHeaders,
+                                ),
                             ),
-                        ),
-                    )
-                    is SolconTvPlusProtocol.Playback.UnsupportedProtected ->
-                        ResolvedPlayback.Unsupported(playback.reason)
-                    is SolconTvPlusProtocol.Playback.Error -> ResolvedPlayback.Failed(playback.reason)
+                        )
+                    }
+                    is SolconTvPlusProtocol.Playback.UnsupportedProtected -> {
+                        val category = SolconDiagnostics.ErrorCategory.PROTECTED_UNSUPPORTED
+                        diagnostics.recordError(category)
+                        ResolvedPlayback.Unsupported(category, playback.reason)
+                    }
+                    is SolconTvPlusProtocol.Playback.Error -> {
+                        val category = SolconDiagnostics.ErrorCategory.PLAYBACK
+                        diagnostics.recordError(category)
+                        ResolvedPlayback.Failed(category, playback.reason)
+                    }
                 }
             },
-            onFailure = { ResolvedPlayback.Failed(it.message ?: "Solcon TV+ playback request failed") },
+            onFailure = { failure ->
+                val category = if (failure is SolconTvPlusClient.NotAuthenticatedException) {
+                    SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED
+                } else {
+                    SolconDiagnostics.ErrorCategory.NETWORK
+                }
+                diagnostics.recordError(category)
+                ResolvedPlayback.Failed(category, "Solcon TV+ playback request failed")
+            },
         )
     }
 
@@ -205,6 +281,15 @@ class SolconTvPlusRepository(
         return categoryDao.findByRemoteIds(sourceId, MediaType.LIVE, desired.mapNotNull { it.remoteId })
             .associate { requireNotNull(it.remoteId) to it.id }
     }
+
+    private fun SolconTvPlusClient.FailureReason.toDiagnosticsCategory(): SolconDiagnostics.ErrorCategory =
+        when (this) {
+            SolconTvPlusClient.FailureReason.INVALID_CREDENTIALS -> SolconDiagnostics.ErrorCategory.INVALID_CREDENTIALS
+            SolconTvPlusClient.FailureReason.DEVICE_LIMIT -> SolconDiagnostics.ErrorCategory.DEVICE_LIMIT
+            SolconTvPlusClient.FailureReason.NOT_AUTHENTICATED -> SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED
+            SolconTvPlusClient.FailureReason.NETWORK -> SolconDiagnostics.ErrorCategory.NETWORK
+            SolconTvPlusClient.FailureReason.PROTOCOL -> SolconDiagnostics.ErrorCategory.PROTOCOL
+        }
 
     companion object {
         const val SOURCE_URL = "solcon-tvplus://account"

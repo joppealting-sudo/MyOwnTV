@@ -1132,6 +1132,8 @@ class LiveViewModel(
      *  The shell renders the ExoPlayer surface instead of mpv's when this is set. */
     private val _liveOnExo = MutableStateFlow(false)
     val liveOnExo: StateFlow<Boolean> = _liveOnExo.asStateFlow()
+    private val _solconPlaybackError = MutableSharedFlow<tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory>(extraBufferCapacity = 1)
+    val solconPlaybackError: SharedFlow<tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory> = _solconPlaybackError.asSharedFlow()
     private val _liveOnMulticast = MutableStateFlow(false)
     val liveOnMulticast: StateFlow<Boolean> = _liveOnMulticast.asStateFlow()
     private val _previewOnMulticast = MutableStateFlow(false)
@@ -1449,7 +1451,7 @@ class LiveViewModel(
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
             if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return@launch
-            val playableChannel = resolveSolconPlayback(channel) ?: return@launch
+            val playableChannel = resolveSolconPlayback(channel, notifyFailure = true) ?: return@launch
             if (playableChannel.drmConfig != null) return@launch
             val source = withContext(Dispatchers.IO) { sourceDao.getById(playableChannel.sourceId) }
             val url = if (streamUrlResolver.needsResolve(source)) {
@@ -1507,7 +1509,10 @@ class LiveViewModel(
     private var forceTsForExo: String? = null
 
     /** Resolve a Solcon TV+ channel just before playback without persisting the signed result. */
-    private suspend fun resolveSolconPlayback(channel: ChannelEntity): ChannelEntity? {
+    private suspend fun resolveSolconPlayback(
+        channel: ChannelEntity,
+        notifyFailure: Boolean = false,
+    ): ChannelEntity? {
         if (!tv.own.owntv.provider.solcon.SolconStreamPolicy.classify(channel.streamUrl).isTvPlus) return channel
         return when (val resolved = solconTvPlusRepository.resolveLive(channel)) {
             is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Ready -> channel.copy(
@@ -1516,11 +1521,13 @@ class LiveViewModel(
                 drmConfig = resolved.drmConfig,
             )
             is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Unsupported -> {
-                engineLog(resolved.reason)
+                engineLog("Solcon TV+ playback unavailable (${resolved.category.name})")
+                if (notifyFailure) _solconPlaybackError.tryEmit(resolved.category)
                 null
             }
             is tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository.ResolvedPlayback.Failed -> {
-                engineLog(resolved.reason)
+                engineLog("Solcon TV+ playback failed (${resolved.category.name})")
+                if (notifyFailure) _solconPlaybackError.tryEmit(resolved.category)
                 null
             }
         }
@@ -1532,7 +1539,7 @@ class LiveViewModel(
     private suspend fun playChannel(originalChannel: ChannelEntity) {
         val pid = currentProfileId() ?: return
         if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, originalChannel.categoryId, profileDao, categoryDao)) return
-        val channel = resolveSolconPlayback(originalChannel) ?: return
+        val channel = resolveSolconPlayback(originalChannel, notifyFailure = true) ?: return
         // Live TV set to play externally: hand the channel over instead of tuning an in-app engine.
         // History is still recorded, so the channel shows up in History/Recently watched either way.
         // #115 — a protected channel stays in-app whatever this setting says: no standard intent extra

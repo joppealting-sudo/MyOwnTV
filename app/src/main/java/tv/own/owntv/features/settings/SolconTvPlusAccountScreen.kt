@@ -48,6 +48,7 @@ fun SolconTvPlusAccountScreen(
     val vm: SolconTvPlusViewModel = koinViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    val diagnostics by vm.diagnostics.collectAsStateWithLifecycle()
     val colors = OwnTVTheme.colors
     val firstFocus = remember { FocusRequester() }
     val synchronizedCallback by rememberUpdatedState(onSynchronized)
@@ -91,6 +92,7 @@ fun SolconTvPlusAccountScreen(
             color = colors.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
+        SolconDiagnosticsSummary(diagnostics)
 
         when (val current = state) {
             SolconTvPlusViewModel.UiState.SignedOut -> {
@@ -230,6 +232,99 @@ fun SolconTvPlusAccountScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SolconDiagnosticsSummary(
+    snapshot: tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.Snapshot,
+) {
+    if (
+        snapshot.lastSyncAtMs == null &&
+        snapshot.lastDiscovery == null &&
+        snapshot.lastPlaybackRoute == null &&
+        snapshot.lastError == null
+    ) return
+
+    val colors = OwnTVTheme.colors
+    Text(
+        stringResource(R.string.solcon_tvplus_status_title),
+        style = MaterialTheme.typography.titleMedium,
+        color = colors.onSurface,
+    )
+    snapshot.lastSyncAtMs?.let { atMs ->
+        val formatted = remember(atMs) {
+            java.text.DateFormat.getDateTimeInstance(
+                java.text.DateFormat.SHORT,
+                java.text.DateFormat.SHORT,
+            ).format(java.util.Date(atMs))
+        }
+        Text(
+            stringResource(R.string.solcon_tvplus_last_sync_time, formatted),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+        val tvText = pluralStringResource(
+            R.plurals.solcon_tvplus_channels_count,
+            snapshot.tvChannels,
+            snapshot.tvChannels,
+        )
+        val radioText = pluralStringResource(
+            R.plurals.solcon_tvplus_radio_channels_count,
+            snapshot.radioChannels,
+            snapshot.radioChannels,
+        )
+        val guideText = pluralStringResource(
+            R.plurals.solcon_tvplus_guide_entries_count,
+            snapshot.programmes,
+            snapshot.programmes,
+        )
+        Text(
+            stringResource(R.string.solcon_tvplus_cached_summary, tvText, radioText, guideText),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+    }
+    snapshot.epgComplete?.let { complete ->
+        Text(
+            stringResource(
+                if (complete) R.string.solcon_tvplus_epg_complete else R.string.solcon_tvplus_epg_partial,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+    }
+    snapshot.lastDiscovery?.let { discovery ->
+        Text(
+            stringResource(
+                when (discovery) {
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.DiscoveryResult.DISCOVERED ->
+                        R.string.solcon_tvplus_discovery_discovered
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.DiscoveryResult.DEFAULT_FALLBACK ->
+                        R.string.solcon_tvplus_discovery_default
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.DiscoveryResult.COMPAT_FALLBACK ->
+                        R.string.solcon_tvplus_discovery_compat
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+    }
+    snapshot.lastPlaybackRoute?.let { route ->
+        Text(
+            stringResource(
+                when (route) {
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.PlaybackRoute.CLEAR_HTTP ->
+                        R.string.solcon_tvplus_route_clear
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.PlaybackRoute.MULTICAST ->
+                        R.string.solcon_tvplus_route_multicast
+                    tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.PlaybackRoute.WIDEVINE ->
+                        R.string.solcon_tvplus_route_widevine
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
     }
 }
 
