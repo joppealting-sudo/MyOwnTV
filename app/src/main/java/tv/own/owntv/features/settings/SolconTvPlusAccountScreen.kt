@@ -47,8 +47,8 @@ fun SolconTvPlusAccountScreen(
     val error by vm.error.collectAsStateWithLifecycle()
     val colors = OwnTVTheme.colors
     val firstFocus = remember { FocusRequester() }
-    var subscriptionNumber by remember { mutableStateOf("") }
-    var pin by remember { mutableStateOf("") }
+    var subscriptionNumber by remember { mutableStateOf(String()) }
+    var pin by remember { mutableStateOf(String()) }
 
     val sourceName = stringResource(R.string.solcon_tvplus_source_name)
     val tvCategoryName = stringResource(R.string.solcon_tvplus_tv_category)
@@ -120,7 +120,7 @@ fun SolconTvPlusAccountScreen(
                         stringResource(R.string.solcon_tvplus_sign_in),
                         onClick = {
                             val submittedPin = pin
-                            pin = ""
+                            pin = String()
                             vm.signIn(
                                 subscriptionNumber,
                                 submittedPin,
