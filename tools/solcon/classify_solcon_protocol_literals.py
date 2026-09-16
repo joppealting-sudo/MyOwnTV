@@ -27,6 +27,7 @@ APPROVED_TECHNICAL_FILES = {
     "app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt": "technical",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt": "protocol",
+    "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt": "technical",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt": "technical",
