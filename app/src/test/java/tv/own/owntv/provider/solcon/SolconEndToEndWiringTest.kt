@@ -1,6 +1,7 @@
 package tv.own.owntv.provider.solcon
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,5 +47,22 @@ class SolconEndToEndWiringTest {
         assertTrue(live.contains("playPreview(resolved)"))
         assertTrue(live.contains("tuneTile(engine, resolved, muted)"))
         assertTrue(live.contains("val playableChannel = resolveSolconPlayback(channel)"))
+    }
+
+    @Test
+    fun `safe diagnostics are wired to account UI and playback failures`() {
+        val repository = source("src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt")
+        val accountVm = source("src/main/java/tv/own/owntv/features/settings/SolconTvPlusViewModel.kt")
+        val account = source("src/main/java/tv/own/owntv/features/settings/SolconTvPlusAccountScreen.kt")
+        val live = source("src/main/java/tv/own/owntv/features/live/LiveViewModel.kt")
+        val shell = source("src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt")
+
+        assertTrue(repository.contains("diagnostics.recordSync("))
+        assertTrue(repository.contains("diagnostics.recordPlaybackRoute("))
+        assertTrue(accountVm.contains("val diagnostics"))
+        assertTrue(account.contains("vm.diagnostics.collectAsStateWithLifecycle()"))
+        assertTrue(live.contains("solconPlaybackError"))
+        assertTrue(shell.contains("solconPlaybackError.collect"))
+        assertFalse(live.contains("engineLog(resolved.reason)"))
     }
 }
