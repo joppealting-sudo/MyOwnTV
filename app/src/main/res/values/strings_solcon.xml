@@ -13,8 +13,20 @@
     <string name="solcon_tvplus_signing_in">Signing in to Solcon TV+…</string>
     <string name="solcon_tvplus_syncing">Syncing channels and guide…</string>
     <string name="solcon_tvplus_connected">Solcon TV+ is connected</string>
-    <string name="solcon_tvplus_sync_done">Synced %1$d channels, including %2$d radio channels.</string>
-    <string name="solcon_tvplus_sync_done_epg">Synced %1$d channels, %2$d radio channels and %3$d guide entries.</string>
+    <plurals name="solcon_tvplus_channels_count">
+        <item quantity="one">%d channel</item>
+        <item quantity="other">%d channels</item>
+    </plurals>
+    <plurals name="solcon_tvplus_radio_channels_count">
+        <item quantity="one">%d radio channel</item>
+        <item quantity="other">%d radio channels</item>
+    </plurals>
+    <plurals name="solcon_tvplus_guide_entries_count">
+        <item quantity="one">%d guide entry</item>
+        <item quantity="other">%d guide entries</item>
+    </plurals>
+    <string name="solcon_tvplus_sync_done">Synced %1$s, including %2$s.</string>
+    <string name="solcon_tvplus_sync_done_epg">Synced %1$s, %2$s and %3$s.</string>
     <string name="solcon_tvplus_error_credentials">The subscription number or PIN was not accepted.</string>
     <string name="solcon_tvplus_error_device_limit">Your Solcon TV+ account has reached its device limit.</string>
     <string name="solcon_tvplus_error_network">Could not reach Solcon TV+. Check the network connection and try again.</string>
