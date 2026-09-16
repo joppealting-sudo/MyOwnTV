@@ -7,12 +7,13 @@ import java.net.URI
  *
  * Only numeric IPv4 multicast destinations are accepted. Host names are intentionally never resolved
  * here: classification must not perform network I/O or accidentally redirect an ordinary stream into
- * the multicast engine.
+ * the multicast engine. TV+ synthetic URLs are accepted only for the exact live-channel shape.
  */
 object SolconStreamPolicy {
     enum class Transport {
         RTP_MULTICAST,
         UDP_MULTICAST,
+        TVPLUS_PROVIDER,
         OTHER,
     }
 
@@ -22,22 +23,29 @@ object SolconStreamPolicy {
     ) {
         val isMulticast: Boolean
             get() = transport == Transport.RTP_MULTICAST || transport == Transport.UDP_MULTICAST
+
+        val isTvPlus: Boolean
+            get() = transport == Transport.TVPLUS_PROVIDER
     }
+
+    private val tvPlusLive = Regex("^solcon-tvplus://live/([0-9]+)$", RegexOption.IGNORE_CASE)
 
     fun classify(url: String): Decision {
         val trimmed = url.trim()
         if (trimmed.isEmpty()) return Decision(Transport.OTHER, trimmed)
+
+        if (tvPlusLive.matches(trimmed)) {
+            return Decision(Transport.TVPLUS_PROVIDER, trimmed)
+        }
 
         // java.net.URI accepts the IPTV `scheme://@group:port` spelling and exposes the numeric group
         // as host, so no provider-specific textual rewrite is needed before parsing.
         val uri = runCatching { URI(trimmed) }.getOrNull()
             ?: return Decision(Transport.OTHER, trimmed)
         val scheme = uri.scheme?.lowercase() ?: return Decision(Transport.OTHER, trimmed)
-        val rtpScheme = Transport.RTP_MULTICAST.name.substringBefore('_').lowercase()
-        val udpScheme = Transport.UDP_MULTICAST.name.substringBefore('_').lowercase()
         val transport = when (scheme) {
-            rtpScheme -> Transport.RTP_MULTICAST
-            udpScheme -> Transport.UDP_MULTICAST
+            "rtp" -> Transport.RTP_MULTICAST
+            "udp" -> Transport.UDP_MULTICAST
             else -> return Decision(Transport.OTHER, trimmed)
         }
 
@@ -47,17 +55,12 @@ object SolconStreamPolicy {
             return Decision(Transport.OTHER, trimmed)
         }
 
-        val normalized = buildString {
-            append(scheme)
-            append(':')
-            append('/')
-            append('/')
-            append(host)
-            append(':')
-            append(port)
-        }
+        val normalized = "$scheme://$host:$port"
         return Decision(transport = transport, normalizedUrl = normalized)
     }
+
+    fun tvPlusLiveId(url: String): String? =
+        tvPlusLive.matchEntire(url.trim())?.groupValues?.getOrNull(1)
 
     private fun isIpv4Multicast(host: String): Boolean {
         val parts = host.split('.')
