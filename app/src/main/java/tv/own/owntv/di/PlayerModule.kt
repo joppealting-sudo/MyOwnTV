@@ -5,6 +5,7 @@ import org.koin.dsl.module
 import tv.own.owntv.player.HeroPreviewEngine
 import tv.own.owntv.player.LivePreviewEngine
 import tv.own.owntv.player.OwnTVPlayer
+import tv.own.owntv.provider.solcon.multicast.SolconMulticastEngine
 
 /** App-wide libmpv player. */
 val playerModule = module {
@@ -29,6 +30,8 @@ val playerModule = module {
     // context, streamingHttp, diagnostics, settings, connectivity (auto-resume when the network
     // returns), playbackPrefs (per-channel zoom/volume)
     single { LivePreviewEngine(androidContext(), get(), get(), get(), get(), get()) }
+    // Media3 engine dedicated to local clear RTP/UDP MPEG-TS multicast.
+    single { SolconMulticastEngine(androidContext()) }
     // Multiview's engines. The `single` above stays exactly what it was — the one long-lived engine
     // behind the Live preview pane and promoted fullscreen playback. The pool builds its own, one per
     // tile, and is the only thing that owns more than one at a time.
