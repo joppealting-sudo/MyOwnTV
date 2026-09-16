@@ -31,22 +31,36 @@ class SolconTvPlusClient(
         if (subscriptionNumber.isBlank() || pin.isBlank()) {
             return@withContext LoginResult.Failure(FailureReason.INVALID_CREDENTIALS, "Missing credentials")
         }
-        val discovered = discoverApiRoot()
-        val primaryRoot = discovered ?: SolconTvPlusProtocol.DEFAULT_API_ROOT
-        val primaryDiscovery = if (discovered != null) {
-            SolconDiagnostics.DiscoveryResult.DISCOVERED
+
+        val discovered = discoverApiEndpoint(subscriptionNumber)
+        val attempts = if (discovered != null) {
+            listOf(
+                Triple(
+                    SolconTvPlusProtocol.apiRoot(discovered, SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV),
+                    SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
+                    SolconDiagnostics.DiscoveryResult.DISCOVERED,
+                ),
+                Triple(
+                    SolconTvPlusProtocol.apiRoot(discovered, SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV),
+                    SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV,
+                    SolconDiagnostics.DiscoveryResult.DISCOVERED,
+                ),
+            )
         } else {
-            SolconDiagnostics.DiscoveryResult.DEFAULT_FALLBACK
-        }
-        val attempts = listOf(
-            Triple(primaryRoot, SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV, primaryDiscovery),
-            Triple(primaryRoot, SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV, primaryDiscovery),
-            Triple(
-                SolconTvPlusProtocol.COMPAT_API_ROOT,
-                SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
-                SolconDiagnostics.DiscoveryResult.COMPAT_FALLBACK,
-            ),
-        ).distinctBy { it.first to it.second }
+            val fallback = SolconDiscoveryEndpoint(FALLBACK_AVS_HOST)
+            listOf(
+                Triple(
+                    SolconTvPlusProtocol.apiRoot(fallback, SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV),
+                    SolconTvPlusProtocol.LoginFlavor.LEGACY_PCTV,
+                    SolconDiagnostics.DiscoveryResult.COMPAT_FALLBACK,
+                ),
+                Triple(
+                    SolconTvPlusProtocol.apiRoot(fallback, SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV),
+                    SolconTvPlusProtocol.LoginFlavor.CURRENT_ANDROID_TV,
+                    SolconDiagnostics.DiscoveryResult.DEFAULT_FALLBACK,
+                ),
+            )
+        }.distinctBy { it.first to it.second }
 
         var lastProtocol: String? = null
         for ((root, flavor, discoveryResult) in attempts) {
@@ -134,9 +148,9 @@ class SolconTvPlusClient(
 
     fun logout() = sessions.clear()
 
-    private suspend fun discoverApiRoot(): String? = runCatching {
-        val payload = get(SolconTvPlusProtocol.DISCOVERY_URL, session = null)
-        if (payload.code in 200..299) SolconTvPlusProtocol.parseDiscoveredApiRoot(payload.body) else null
+    private suspend fun discoverApiEndpoint(subscriptionNumber: String): SolconDiscoveryEndpoint? = runCatching {
+        val payload = get(SolconTvPlusProtocol.subscriptionDiscoveryUrl(subscriptionNumber), session = null)
+        if (payload.code in 200..299) SolconTvPlusProtocol.parseDiscoveryEndpoint(payload.body) else null
     }.getOrNull()
 
     private suspend fun authenticatedGet(url: (SolconTvPlusSessionStore.StoredSession) -> String): Result<ResponsePayload> {
@@ -147,7 +161,7 @@ class SolconTvPlusClient(
     private fun get(url: String, session: SolconTvPlusSessionStore.StoredSession?): ResponsePayload {
         val request = requestBuilder(url, session).get().build()
         return http.newCall(request).execute().use { response ->
-            ResponsePayload(response.code, response.body?.string().orEmpty(), cookieHeader(response.headers.values("Set-Cookie")))
+            ResponsePayload(response.code, response.body.string(), cookieHeader(response.headers.values("Set-Cookie")))
         }
     }
 
@@ -155,7 +169,7 @@ class SolconTvPlusClient(
         val body = json.toRequestBody(JSON)
         val request = requestBuilder(url, session).post(body).build()
         return http.newCall(request).execute().use { response ->
-            ResponsePayload(response.code, response.body?.string().orEmpty(), cookieHeader(response.headers.values("Set-Cookie")))
+            ResponsePayload(response.code, response.body.string(), cookieHeader(response.headers.values("Set-Cookie")))
         }
     }
 
@@ -183,6 +197,7 @@ class SolconTvPlusClient(
     class NotAuthenticatedException : IllegalStateException("Solcon TV+ session is not authenticated")
 
     private companion object {
+        const val FALLBACK_AVS_HOST = "api-avs67.tv.prod.itvavs.prod.aws.kpn.com"
         val JSON = "application/json; charset=utf-8".toMediaType()
     }
 }
