@@ -2,364 +2,246 @@
 
 ## Goal
 
-Turn the existing Solcon TV+ work on `feat/solcon-tv` into a real first-class OwnTV source that is reachable from the Android TV UI, authenticates a legitimate Solcon subscription, synchronizes the user's entitled catalog into OwnTV's existing source/channel/EPG architecture, restores that state after restart, and routes playback through the appropriate existing or Solcon-specific engine without bypassing DRM or provider authorization.
+Turn the Solcon work on `feat/solcon-tv` into a first-class OwnTV source reachable and usable from the Android TV UI. A legitimate Solcon subscriber must be able to sign in with subscription number + PIN, synchronize entitled TV/radio/EPG data into OwnTV's normal repositories, use those channels through normal Live/Guide/Radio/favorites/profile flows, restart the app without losing state, and receive either legitimate playback or a precise provider/DRM diagnostic.
 
-The built Standard Debug APK must support both of these user journeys:
+Required journeys:
 
-1. First-run/no-source: create or select a profile -> choose Solcon TV+ -> enter subscription number and PIN -> authenticate -> synchronize -> return to normal OwnTV UI with the Solcon source active.
-2. Existing profile: More -> Settings -> Solcon TV+ -> inspect account/sync state, synchronize again, or sign out.
+1. Install -> open OwnTV -> create/select profile -> no source -> Add source -> Solcon TV+ -> sign in -> synchronize -> Solcon becomes active OwnTV source -> normal Live/Guide/Radio UI.
+2. More -> Settings -> Solcon TV+ -> account/status -> Synchronize now / Logout.
 
-## Current branch state and failure
+## Current failure
 
-The branch already contains substantial Solcon implementation:
+The branch already contains `SolconTvPlusAccountScreen`, `SolconTvPlusViewModel`, TV+ client/protocol/repository/session code, multicast/RTP code, stream policy, playback routing changes and Solcon strings/tests.
 
-- `SolconTvPlusAccountScreen`
-- `SolconTvPlusViewModel`
-- `SolconTvPlusClient`
-- `SolconTvPlusProtocol`
-- `SolconTvPlusRepository`
-- `SolconTvPlusSessionStore`
-- `SolconStreamPolicy`
-- `SolconMulticastEngine` and RTP/UDP transport code
-- Live playback routing changes
-- Solcon-specific strings and provider unit tests
+The feature is still not integrated end-to-end. `SettingsScreen` has no Solcon tab, no Solcon root row and no dispatch branch that renders `SolconTvPlusAccountScreen`, so the compiled screen is unreachable. `appModule` also does not bind the complete Solcon TV+ account/repository/client/session stack, so simply exposing the row would create a runtime DI failure.
 
-The current APK nevertheless leaves Solcon unreachable because the application integration is incomplete.
+The old branch design treated Solcon mainly as a multicast/local-playlist extension. This specification supersedes it. Multicast remains one legitimate playback route, but the product is an authenticated first-class OwnTV source.
 
-The first confirmed navigation defect is in `SettingsScreen`: the settings tab enum has no Solcon destination, the root settings data has no Solcon row, and the screen dispatcher has no branch that renders `SolconTvPlusAccountScreen`. Therefore a compiled account screen cannot be reached through More -> Settings.
+## Core rule: use OwnTV architecture
 
-The branch also does not currently bind the TV+ account ViewModel/repository/client/session stack in `appModule`, so exposing the screen without finishing DI would only move the failure to runtime.
+Solcon-specific code owns only provider concerns: authentication, session state, catalog translation, just-in-time playback resolution, safe diagnostics and multicast transport.
 
-The previous design for this branch treated Solcon primarily as a multicast/local-playlist extension. That design is superseded by this specification. Multicast remains a supported playback route, but the provider is now an authenticated first-class OwnTV source.
+After synchronization, Solcon content uses the same OwnTV systems as every other source:
 
-## Architectural principles
+- profile/source linking;
+- channel/category persistence;
+- active/default source state;
+- channel numbers;
+- Guide/EPG;
+- Live TV;
+- radio/audio-only UI;
+- favorites;
+- watch history;
+- fullscreen/mini-player lifecycle;
+- channel up/down and numeric direct tune where already supported.
 
-### Reuse OwnTV, do not build a Solcon sub-app
+Do not create a parallel Solcon favorites implementation, guide, profile system, radio app or player shell.
 
-Solcon-specific code is responsible only for provider authentication, catalog translation, playback resolution, provider diagnostics, and multicast transport.
+## Security and provider boundary
 
-After synchronization, Solcon channels must behave as ordinary OwnTV channels and flow through the same systems used by other sources:
+Use only the legitimate authenticated TV+ flow and data/routes returned for the user's authorized subscription/session.
 
-- profiles and profile-source linking
-- channel repository/database
-- categories
-- channel numbers
-- Guide/EPG
-- favorites
-- watch history
-- radio/audio-only presentation
-- live browsing
-- fullscreen player
-- channel zapping
-- numeric channel entry where already supported
-- app restart/session restoration
+Never hardcode or commit credentials or secrets. Never persist a PIN. Never log PINs, access/session tokens, cookies, signed private playback URLs, DRM license material, private keys or certificate private material. Do not extract DRM keys, spoof protected device identities, copy device-bound authorization from another device, bypass entitlement/device limits, or bypass DRM.
 
-There must not be a parallel Solcon favorites database, separate Solcon guide UI, separate Solcon radio app, or isolated Solcon player shell.
+If Solcon returns standard Android Widevine information for this authorized device/session, pass it to OwnTV's existing Media3/MediaDrm path normally. If Solcon rejects the app/device or requires unavailable proprietary/device-bound provisioning, stop at that boundary and show a precise diagnostic. Clear legitimate multicast remains independently usable.
 
-### Legal and security boundary
+## Dependency injection and session lifecycle
 
-The integration may use only the legitimate authenticated Solcon TV+ flow and data made available to the user's subscription/device session.
+Wire the full Solcon TV+ stack through Koin using existing OwnTV conventions. Required bindings include `SolconTvPlusViewModel`, `SolconTvPlusRepository`, `SolconTvPlusClient`, `SolconTvPlusSessionStore`/session provider and the dependencies required for playback resolution. `SolconMulticastEngine` remains application-scoped.
 
-The implementation must not:
+Prefer constructor references or named constructor parameters so same-typed dependencies cannot silently swap.
 
-- hardcode account credentials;
-- commit secrets;
-- log PINs, bearer/access tokens, cookies, signed playback URLs, DRM headers, DRM material, private keys, or client-certificate private material;
-- extract or copy private DRM keys;
-- spoof protected device identities;
-- copy protected authorization material from another device;
-- bypass DRM, entitlement checks, device limits, or provider provisioning.
-
-If authenticated playback returns ordinary Android Widevine information for an authorized session/device, OwnTV may pass that information to Media3/MediaDrm normally. If Solcon rejects the app/device or requires unavailable proprietary/device-bound provisioning, OwnTV must expose a precise diagnostic and stop there.
-
-Clear multicast playback is independent from protected-content support and must remain usable when the network and entitlement data legitimately expose such a route.
-
-## Provider lifecycle and dependency injection
-
-The Solcon TV+ stack is application-scoped and wired through Koin using the repository's existing patterns.
-
-Required bindings include the components needed by:
-
-- `SolconTvPlusViewModel`
-- `SolconTvPlusRepository`
-- `SolconTvPlusClient`
-- `SolconTvPlusSessionStore` / session provider
-- playback resolver/session lookup dependencies
-- existing `SolconMulticastEngine`
-
-Bindings must use constructor references or named parameters where practical so dependency order cannot silently break at runtime.
-
-The session store is the only persistence layer for provider session material. PINs are submitted transiently and never persisted. Session restoration on process restart initializes the ViewModel as connected only when the stored session is still structurally present; failed authenticated calls may invalidate that state according to provider responses.
+The session store is the only persistence location for provider session material. PINs exist only for the immediate login request. On process restart, session restoration may initialize the account as connected when stored session state exists; subsequent authenticated calls are authoritative and may invalidate an expired/rejected session.
 
 ## Settings integration
 
-`SettingsScreen` gains a dedicated `SettingsTab.SOLCON` destination and a root settings row under the app-level settings group.
+Add `SettingsTab.SOLCON` and a real root row under the app-level Settings group:
 
-Visible copy:
+- title resource: `Solcon TV+`
+- description resource: localized equivalent of `Login, subscription and synchronization`
 
-- title: `Solcon TV+`
-- description: `Login, subscription and synchronization` or the localized equivalent
+Selecting it renders `SolconTvPlusAccountScreen` using the same Settings detail-screen pattern as existing destinations. Back returns to the root Settings context and restores focus to the Solcon row.
 
-All visible strings use Android resources and pass the existing `verifyI18nLiterals` enforcement.
+All visible strings are resources and must pass `verifyI18nLiterals`.
 
-Selecting the row opens `SolconTvPlusAccountScreen` in the same detail-screen pattern as other Settings destinations. Back returns to the exact root settings context and restores focus to the Solcon row.
+The account screen must be fully remote-operable: D-pad, OK/select and Back; numeric input for subscription/PIN; password masking for PIN; no touch/mouse dependency; no focus trap. Signed-out state focuses the first useful credential field. Connected state focuses `Synchronize now` or the primary action.
 
-The account screen supports Android TV remote navigation only:
+## First-run / no-source discovery
 
-- D-pad traversal among subscription number, PIN, sign-in/sync/logout/back controls;
-- OK/select activation;
-- Back always escapes the screen or keyboard state without trapping focus;
-- numeric keyboard/input type for subscription and PIN;
-- password masking for PIN;
-- no mouse or touch requirement.
+Extend OwnTV's existing no-source/add-source path so Solcon TV+ is directly discoverable. It must invoke the same account/setup implementation used from Settings, not a duplicate login flow.
 
-The existing account screen should be reused and adjusted rather than replaced unless audit findings prove a component violates OwnTV focus conventions.
+After successful synchronization:
 
-## First-run and no-source discovery
+1. a stable Solcon `SourceEntity` exists;
+2. it is linked to the active profile through OwnTV's normal profile-source relation;
+3. synchronized channels/categories/EPG live in normal OwnTV tables;
+4. the active/default source state points to Solcon when this is the profile's first source;
+5. shell/source observers refresh;
+6. `Geen bron` / `No source` disappears because underlying source state changed, not because the top bar was special-cased;
+7. normal Live/Guide/Radio screens consume the data.
 
-Solcon must also be visible when the active profile has no usable source.
+Add a regression test specifically preventing `SolconTvPlusAccountScreen` from existing without a reachable UI route.
 
-The existing no-source/add-source flow is extended so Solcon TV+ appears as a normal source option. Selecting it enters the same account/setup state used by Settings rather than introducing a second authentication implementation.
+## Authentication UI states
 
-After successful sync:
-
-1. a Solcon `SourceEntity` exists;
-2. it is linked to the active profile through the normal profile-source relation;
-3. its synchronized channels exist in the normal OwnTV channel tables;
-4. the active profile/source summaries refresh;
-5. the shell no longer remains in `No source` / `Geen bron` state;
-6. the user returns to or can navigate directly into normal Live/Guide/Radio UI.
-
-A navigation/integration regression test must make it impossible for the APK to contain `SolconTvPlusAccountScreen` while having no reachable UI route to it.
-
-## Authentication and session behavior
-
-The account screen exposes these states:
+Support:
 
 - signed out;
 - signing in;
 - synchronizing;
 - connected;
-- authentication failure;
-- device/session-limit failure;
+- invalid credentials;
+- provider device/session limit;
 - network failure;
-- protocol/provider failure;
-- empty or unusable catalog;
-- partial synchronization warning where applicable.
+- provider/protocol failure;
+- empty/unusable catalog;
+- partial EPG synchronization warning.
 
-Successful sign-in immediately proceeds into synchronization for setup flows. Settings may also expose `Synchronize now` for an already connected account.
+Successful login immediately synchronizes in the setup path. Connected accounts expose `Synchronize now` and `Logout`.
 
-Logout must:
+### Logout semantics
 
-- invalidate/remove stored Solcon session material;
-- clear account UI state;
-- leave no reusable sensitive provider state in logs;
-- make subsequent protected/authenticated playback resolution fail cleanly until login occurs again.
+Logout clears/invalidate all persisted Solcon session material and account UI authentication state, but does **not** delete the previously synchronized OwnTV source/catalog. This preserves stable channel ids, favorites/history and offline browsing metadata.
 
-Existing synchronized channel rows may either remain as unavailable cached catalog data or be removed according to current OwnTV source-removal conventions, but behavior must be deterministic and covered by tests. The preferred behavior is to retain the source/catalog only if OwnTV already retains disconnected source metadata elsewhere; otherwise remove/unlink it consistently with existing source deletion semantics. The implementation plan must resolve this by following the existing source lifecycle rather than inventing a Solcon-only rule.
+After logout, authenticated TV+ playback resolution returns a typed `sign in required` result until the user reconnects. The cached source may remain visible because it is still a configured source, but the account/diagnostics UI clearly reports signed-out state. Re-login and synchronization reuse the same source and stable remote channel ids.
 
-## Source registration and data mapping
+Explicit source deletion remains the existing OwnTV Manage Sources operation and follows normal source deletion semantics.
 
-`SolconTvPlusRepository` remains the adapter between the provider protocol and OwnTV persistence.
+## Catalog/source mapping
 
-The provider source is represented by a stable synthetic provider URL such as the existing `solcon-tvplus://account`, which identifies the source without containing secrets.
+`SolconTvPlusRepository` remains the adapter from provider protocol objects to OwnTV persistence.
 
-Each synchronized provider channel maps into `ChannelEntity` and preserves, where available:
+Use a stable secret-free synthetic provider URL such as the existing `solcon-tvplus://account` to identify the source.
 
-- remote/provider channel id;
+Each entitled channel maps into normal `ChannelEntity`/category/EPG structures while preserving data returned by Solcon where available:
+
+- provider channel id;
 - channel number;
-- channel name;
+- name;
 - logo;
-- TV versus radio classification;
-- sort/order information;
+- TV vs radio;
+- provider ordering;
 - EPG identifier;
-- catch-up/start-over/replay capability metadata;
-- entitlement/protection metadata needed for later playback resolution, stored only when safe and non-secret.
+- catch-up/start-over/replay capability;
+- non-secret entitlement/protection classification needed for routing.
 
-Signed playback URLs, transient cookies, access tokens, and DRM license material must not be stored in Room. Those are resolved just in time.
+Store a stable internal playback reference such as `solcon-tvplus://live/<provider-id>`, never a transient signed stream URL. Resolve private URLs/headers/DRM information just in time.
 
-Synchronization updates existing rows by stable remote ids and removes stale provider rows in the same source without damaging unrelated OwnTV sources.
+Re-sync updates channels by stable remote id so favorites/history remain attached, and removes stale rows only for this Solcon source. A partial EPG failure must not discard a valid channel catalog. A failed sync keeps the last known good catalog and exposes failure/partial state.
 
-Partial EPG failure must not discard an otherwise valid channel catalog. Catalog failure must report useful state while keeping the last known good data when that matches existing OwnTV sync semantics.
+## Active source and shell state
 
-## Source activation and shell state
+Audit the actual repository/ViewModel chain that drives:
 
-Creating/linking the provider source is not enough: the normal application state must observe it.
-
-The implementation must trace and update whichever existing repository/ViewModel drives:
-
-- active source id;
+- `SettingsRepository.defaultSourceId` / equivalent active source state;
 - profile source selection;
-- source summary in the top-right shell;
-- Live/Guide content refresh after source sync.
+- top-right `sourceSummary`;
+- Live/Guide source observers.
 
-After first successful Solcon sync, `sourceSummary` must resolve to the real source rather than continue rendering `shell_no_source`.
+When Solcon is the first successfully synchronized source for a profile, set it through the same OwnTV active/default-source mechanism used by normal source setup. Do not hardcode the shell label.
 
-Do not special-case the top bar to display `Solcon TV+`; fix the underlying OwnTV source/profile state so the existing summary naturally reports the configured source.
+## Guide / EPG
 
-## EPG / Guide
+Write Solcon guide data into OwnTV's existing EPG tables. The normal Guide must show it; there is no Solcon-only guide.
 
-Solcon EPG is written into OwnTV's existing EPG tables using the synchronized provider channel mapping.
-
-The normal Guide consumes this data. There is no Solcon-specific Guide screen.
-
-Where provider data exists, support:
-
-- current programme;
-- next programme;
-- timeline/grid population;
-- channel number/name/logo relationships;
-- programme title/description;
-- replay/start-over capability metadata.
-
-EPG synchronization reports completeness separately from catalog success so the account/diagnostic screen can distinguish `channels synchronized, EPG partial` from a total sync failure.
+Where provider data exists, preserve current/next programs, timeline/grid entries, channel relationships, title/description and replay/start-over metadata. Track EPG completeness separately from catalog success so diagnostics can report `complete`, `partial` or `unavailable`.
 
 ## Radio
 
-Provider radio channels map into OwnTV's existing live/audio channel model and appear in the normal radio/audio-only experience.
+Map Solcon radio stations into OwnTV's normal live/audio channel model. They use the same source/session/favorites/profile/playback architecture as TV and appear in the existing radio/audio-only experience. Do not create a separate radio source.
 
-Radio uses the same source, session, favorites, profile, and playback-resolution architecture as TV channels. No parallel radio source is created.
+## Playback routing
 
-## Playback resolution
+All tunes start from the normal OwnTV channel selection path.
 
-Playback has one normal OwnTV entry point. A selected channel is inspected/resolved before the player is started.
+### TV+ provider reference
 
-The routing rules are:
+For `solcon-tvplus://live/<id>`, resolve playback through the authenticated Solcon repository immediately before playback.
 
-### Provider reference
+### Clear HTTP/HLS/DASH
 
-Channels synchronized from TV+ store a stable internal reference such as `solcon-tvplus://live/<id>` rather than an ephemeral stream URL.
+If the authenticated response supplies a clear ordinary stream and legitimate request headers, use OwnTV's existing Media3/ExoPlayer playback infrastructure.
 
-At tune time the Solcon repository resolves that id through the authenticated session.
+### Standard Widevine
 
-### Clear provider HTTP/HLS/DASH response
+If the response supplies standard Widevine license information and the Android device/session is authorized, translate it to OwnTV's existing `DrmConfig` and use normal Media3/MediaDrm handling.
 
-If TV+ returns an ordinary clear playback URL plus legitimate headers, route it through OwnTV's existing Media3/ExoPlayer playback infrastructure. Do not build another HTTP player.
+### Unsupported protected content
 
-### Widevine response
+If Solcon requires unavailable proprietary/device-bound provisioning, private certificates, an unsupported DRM mode or rejects this client/device, return a typed unsupported result and show a useful provider/provisioning diagnostic. Do not fall back to fake or bypass playback.
 
-If TV+ returns standard Widevine information and the current Android device/session is authorized, translate it to OwnTV's existing `DrmConfig`/Media3 DRM path and let Android MediaDrm perform normal license/provisioning behavior.
+### Clear RTP/UDP multicast
 
-No DRM bypass or emulation is permitted.
+For legitimate IPv4 multicast `rtp://` or `udp://` routes, use `SolconMulticastEngine`. `SolconStreamPolicy` must accept supported multicast syntax but reject malformed and ordinary unicast RTP/UDP destinations.
 
-### Unsupported protected response
+### No simulated success
 
-If Solcon requires proprietary/device-bound provisioning, a private certificate, unsupported DRM mode, or rejects the client/device, return a typed unsupported/diagnostic result. The UI must show a useful message that identifies the boundary instead of silently failing or pretending playback succeeded.
+Production must never silently substitute fake/simulated playback. Existing OwnTV engine fallback is allowed only when it is a real supported engine for the same legitimate stream.
 
-### Clear home-network multicast
+## Live/fullscreen/zapping
 
-For legitimate `rtp://` or `udp://` multicast routes, use the existing `SolconMulticastEngine` and its Media3 RTP/UDP transport.
+Target flow:
 
-`SolconStreamPolicy` remains responsible for detecting valid multicast destinations and must not classify arbitrary unicast RTP/UDP addresses as provider multicast.
+`ChannelEntity -> LiveViewModel -> optional Solcon resolver -> selected legitimate engine -> LiveScreen/preview -> fullscreen -> existing zap controls`.
 
-### No fake fallback
+Solcon channels remain part of the normal Live channel list and zap source. CH+/CH-, numeric tune, fullscreen transitions, media-session ownership, mini/audio presentation and Back behavior reuse existing OwnTV mechanisms.
 
-Production must never silently substitute simulated/fake playback. Existing compatibility fallback behavior may be used only when it represents a real supported OwnTV engine for the same legitimate stream.
+Provider parsing/network calls remain outside `LiveViewModel`; the ViewModel orchestrates typed results and player state only.
 
-## Live TV, fullscreen and zapping
+## Profiles, favorites and history
 
-The completed flow is:
+No Solcon-specific profile/favorite/history implementation is added. Stable source/channel identities and normal profile-source linking make existing OwnTV behavior apply automatically. Tests must prove source linking and stable channel ids survive re-sync/restart so user data is not orphaned.
 
-`OwnTV ChannelEntity -> LiveViewModel -> Solcon resolution when needed -> selected playback engine -> LiveScreen/preview -> fullscreen player -> existing zap controls`.
+## Safe diagnostics
 
-Solcon channels must use the same `LiveViewModel` channel list and zap source as normal OwnTV channels.
+Expose non-secret Solcon operational state in the account screen or existing diagnostics conventions:
 
-Channel up/down, numeric direct tune, fullscreen transitions, mini/audio state, playback session ownership, and normal Back behavior must continue to use existing OwnTV mechanisms.
-
-Any current Solcon-specific routing added to `LiveViewModel` must be audited for duplicated state or paths that bypass the normal player lifecycle. Provider-specific parsing and network calls stay outside the ViewModel.
-
-## Favorites, profiles and history
-
-No new Solcon-specific implementations are added for:
-
-- profiles;
-- favorites;
-- watch history;
-- channel ordering/numbers;
-- parental/profile behavior;
-- existing settings.
-
-Because synchronized channels use ordinary OwnTV entities, these features should work automatically. Integration tests must prove that the provider source is linked to the active profile and that synchronized channel identity remains stable across re-sync/restart so favorites/history are not orphaned.
-
-## Diagnostics
-
-Add a safe Solcon diagnostic model/view into the account screen or existing diagnostics conventions showing only non-secret operational facts:
-
-- signed in / signed out / session unavailable;
-- last successful synchronization timestamp;
-- TV channel count;
-- radio channel count;
+- signed in/out/session unavailable;
+- last successful sync timestamp;
+- TV count;
+- radio count;
 - EPG complete/partial/unavailable;
-- last selected playback route;
+- last playback route category;
 - multicast availability;
-- selected network-interface state where useful;
-- provider/device authorization failure category;
+- useful network/interface state without MAC/private address disclosure;
+- last provider/device authorization failure category;
 - last sync/playback error category.
 
-Never display or log:
+Never display or log PINs, tokens, cookies, private signed URLs, license response bodies, DRM keys, private certificates or provider private blobs. URLs with private query/auth material are redacted.
 
-- subscription PIN;
-- access/session tokens;
-- cookies;
-- signed private playback URLs;
-- license-response bodies;
-- DRM keys or key ids when sensitive;
-- certificate/private-key material;
-- provider private configuration blobs.
+## Required tests
 
-Diagnostics must redact full URLs if they contain query parameters or credentials.
+Add integration coverage beyond isolated provider classes:
 
-## Remote UX and focus
-
-The implementation must follow the existing TV focus system rather than Compose mobile defaults.
-
-Required behavior:
-
-- Settings root row can be reached by D-pad;
-- entering Solcon focuses the first useful control;
-- text fields can invoke Android TV numeric input;
-- D-pad Down/Up escapes text fields and reaches actions;
-- connected state focuses `Synchronize now` or the primary action;
-- Back from screen returns to Settings/no-source flow;
-- Back from IME dismisses it before trapping the user;
-- focus returns to the opening row after closing the screen;
-- no action depends on touch.
-
-## Tests
-
-Testing is integration-first around the exact previous failure mode, in addition to provider unit tests.
-
-At minimum add or extend tests for:
-
-1. Settings root contains a Solcon TV+ route.
-2. Selecting that route dispatches `SolconTvPlusAccountScreen`.
-3. No-source/add-source flow exposes Solcon TV+.
-4. Successful login followed by sync creates/links a real OwnTV source.
-5. Successful sync causes active/source summary state to stop reporting no source.
-6. Catalog mapping preserves remote id, name, number, logo and ordering.
-7. TV and radio map to the intended normal OwnTV categories/experience.
-8. EPG channel/programme mapping is written to OwnTV EPG tables.
-9. Re-sync updates existing stable rows and removes stale Solcon rows only.
-10. Failed authentication returns the correct account state and persists no credentials.
-11. Failed synchronization preserves/report states according to normal source-sync semantics.
-12. Session state restores after ViewModel/process recreation when valid session data exists.
-13. Logout removes session state and subsequent authenticated resolution is unavailable.
-14. `solcon-tvplus://live/<id>` routes through provider resolution before playback.
-15. Clear authenticated HTTP/HLS/DASH routes to the normal Media3 path.
-16. Valid clear RTP/UDP multicast routes to `SolconMulticastEngine`.
-17. Unicast/malformed RTP/UDP does not get misclassified as Solcon multicast.
-18. Standard Widevine response maps to OwnTV's DRM config.
-19. Unsupported/proprietary protected content returns a precise unsupported diagnostic and never falls back to fake playback.
-20. Solcon channels participate in normal zapping/direct tune identity.
+1. Settings root exposes Solcon TV+.
+2. Selecting it dispatches the Solcon account screen.
+3. No-source/add-source exposes Solcon TV+.
+4. Successful login+sync creates and links a real OwnTV source.
+5. First source becomes active/default and shell state no longer reports no source.
+6. Catalog mapping preserves id/name/number/logo/order.
+7. TV vs radio mapping is correct.
+8. EPG channel/programme mapping reaches OwnTV tables.
+9. Re-sync preserves stable rows and removes only stale Solcon rows.
+10. Invalid authentication produces correct state and stores no PIN.
+11. Sync failure retains last-known-good catalog and reports failure.
+12. Session restores after recreation when valid stored state exists.
+13. Logout clears session, keeps cached source/catalog and makes authenticated playback return sign-in-required.
+14. TV+ internal references resolve before playback.
+15. Clear authenticated HTTP/HLS/DASH uses normal Media3 route.
+16. Valid multicast uses `SolconMulticastEngine`.
+17. Malformed/unicast RTP/UDP is not misclassified.
+18. Standard Widevine maps to OwnTV DRM config.
+19. Unsupported/proprietary protected content returns precise unsupported diagnostics and no fake playback.
+20. Solcon channels retain normal zapping/direct-tune identity.
 21. Source/session/channel state restores after app restart.
-22. Navigation regression test proves the account screen cannot exist without at least one real route.
-23. All new user-visible literals are resources and `verifyI18nLiterals` passes.
+22. Navigation regression test prevents an unreachable compiled account screen.
+23. User-visible literals pass `verifyI18nLiterals`.
 
-Where Compose UI tests are too expensive for all logic, split the problem: pure navigation/catalog definitions get unit tests, repository/database mapping gets repository tests, and at least one Android/UI integration test covers the real Settings route and focusable account destination.
+Use pure/unit tests for navigation definitions and routing where possible, repository/database tests for mapping, and at least one Android/UI integration test for the real Settings route/focusable destination.
 
 ## Verification and APK
 
-Before completion, run on the final branch head:
+Before completion run on the final branch head:
 
 ```bash
 ./gradlew testStandardDebugUnitTest
@@ -367,47 +249,36 @@ Before completion, run on the final branch head:
 ./gradlew assembleStandardDebug
 ```
 
-Also run the repository's relevant i18n verification task, including `verifyI18nLiterals` when that is the task name exposed by the build.
+Run the repository's relevant i18n verification task, including `verifyI18nLiterals`. Fix failures properly; do not weaken checks.
 
-Failures must be fixed rather than suppressed. Do not disable or weaken i18n/lint checks to make the branch green.
+For the fresh Standard Debug APK:
 
-For the final APK:
-
-- use the newly built Standard Debug artifact;
-- verify it is a valid APK/ZIP archive;
-- calculate byte size;
-- calculate SHA-256;
-- report exact commit SHA;
+- verify the APK is a valid ZIP/APK archive;
+- report final commit SHA;
 - report exact APK filename;
+- report byte size;
+- report SHA-256;
 - report unit-test result;
 - report i18n result;
 - report lint result;
 - report build result.
 
-GitHub Actions may supplement local verification, but a green workflow is not sufficient if the actual UI route/source lifecycle is still absent.
+GitHub Actions may supplement verification but does not replace checking that the actual UI route/source lifecycle exists.
 
-## Runtime boundary reporting
+## Runtime boundary
 
-The final completion report must distinguish what was verified by automated/local build testing from what requires real Solcon credentials, a Solcon network, or provider-side authorization.
+The final report must distinguish automated/build verification from behavior that requires real credentials, Solcon network access or provider-side DRM authorization.
 
-If the TV+ API or DRM path refuses this app/device, the implementation is still considered complete only if:
-
-- authentication/catalog/source/UI integration is otherwise finished;
-- clear legitimate playback routes work where available;
-- the protected-content failure is surfaced as a precise provider/provisioning diagnostic;
-- no bypass was attempted;
-- the exact runtime boundary and evidence are reported.
-
-Do not claim successful protected-channel playback without evidence from an authorized real-device session.
+If the TV+ API/DRM service refuses this app/device, finish and verify everything else, expose the exact provider/provisioning failure, do not attempt a bypass, and report the runtime boundary and evidence. Never claim protected-channel playback without evidence from an authorized real-device session.
 
 ## Definition of done
 
-The feature is done only when the final built APK implements this functional path:
+Done means the final built APK supports:
 
-Install APK -> open OwnTV -> create/select profile -> no source configured -> choose Solcon TV+ -> enter subscription number + PIN -> authenticate -> synchronize subscription -> Solcon becomes active OwnTV source -> normal Live/Guide/Radio screens consume synchronized data -> select a channel -> playback resolver chooses the appropriate legitimate route -> playback starts or a precise DRM/provisioning diagnostic is shown -> channel switching remains functional -> restart app -> session/source/channel state restores.
+Install -> open OwnTV -> create/select profile -> no source -> choose Solcon TV+ -> enter subscription number + PIN -> authenticate -> synchronize -> Solcon becomes active OwnTV source -> normal channels/Guide/radio appear -> select channel -> legitimate resolver chooses route -> playback starts or precise DRM/provisioning diagnostic appears -> channel switching works -> restart -> source/session/channel state restores.
 
-And this alternate path is also functional:
+And:
 
 More -> Settings -> Solcon TV+ -> account/status/synchronize/logout.
 
-Existing OwnTV functionality must not regress, and the existing OwnTV design system/navigation must remain the primary UI.
+Existing OwnTV functionality and TV-friendly design/navigation must not regress.
