@@ -54,10 +54,13 @@ jobs:
           path: tools/i18n/safe_literals.txt
           if-no-files-found: error
 
-      - name: Unit tests
+      - name: Verify i18n literals
         run: |
           chmod +x ./gradlew
-          ./gradlew testStandardDebugUnitTest --stacktrace
+          ./gradlew verifyI18nLiterals --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew testStandardDebugUnitTest --stacktrace
 
       - name: Lint
         run: ./gradlew lintStandardDebug --stacktrace
