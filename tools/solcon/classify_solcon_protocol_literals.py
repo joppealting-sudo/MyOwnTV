@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate reviewed i18n-safe entries for Solcon provider implementation files.
+"""Generate reviewed i18n-safe entries for Solcon implementation-only literals.
 
 This is a narrow bootstrap helper: it only classifies *new* literals that are not already
-covered by OwnTV's hardcoded baseline or safe manifest, and only inside the provider files
-listed below. UI files are deliberately excluded so user-visible copy must remain Android
-string resources.
+covered by OwnTV's hardcoded baseline or safe manifest, and only inside the implementation
+files listed below. Compose/screens are deliberately excluded so user-visible copy must remain
+Android string resources. The one navigation metadata file listed here contains resource ids
+plus a non-visible route key; it renders no text itself.
 """
 from __future__ import annotations
 
@@ -20,8 +21,9 @@ if spec is None or spec.loader is None:
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 
-# Every file here is implementation/protocol only. Do not add Compose/screens to this map.
+# Every file here is implementation/protocol metadata only. Do not add Compose/screens to this map.
 APPROVED_TECHNICAL_FILES = {
+    "app/src/main/java/tv/own/owntv/features/settings/SolconSettingsRoute.kt": "technical",
     "app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt": "protocol",
     "app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt": "protocol",
@@ -55,7 +57,7 @@ for key, count in sorted(excess.items()):
     classified += count
 
 checker.SAFE_MANIFEST.write_text(checker._serialize_safe(entries), encoding="utf-8")
-print(f"Classified {classified} new Solcon provider literal occurrence(s).")
+print(f"Classified {classified} new Solcon technical literal occurrence(s).")
 
 # Prove that this helper did not accidentally hide literals outside the approved implementation files.
 new_safe_counts, _, errors = checker._safe_entries()
