@@ -26,6 +26,16 @@ class SolconEndToEndWiringTest {
     }
 
     @Test
+    fun `manage sources never sends the synthetic Solcon source through generic M3U actions`() {
+        val manageSources = source("src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt")
+
+        assertTrue(manageSources.contains("SolconTvPlusRepository.SOURCE_URL"))
+        assertTrue(manageSources.contains("managingSolcon"))
+        assertTrue(manageSources.contains("providerManaged = isSolcon"))
+        assertTrue(manageSources.contains("onManageProvider"))
+    }
+
+    @Test
     fun `first successful Solcon sync can become the active OwnTV source`() {
         val repository = source("src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt")
 
