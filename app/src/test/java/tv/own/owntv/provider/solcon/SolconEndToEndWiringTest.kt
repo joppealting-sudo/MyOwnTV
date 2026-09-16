@@ -11,7 +11,7 @@ import org.junit.Test
  */
 class SolconEndToEndWiringTest {
     private fun source(path: String): String =
-        File(System.getProperty("user.dir")).resolve(path).readText()
+        File(requireNotNull(System.getProperty("user.dir"))).resolve(path).readText()
 
     @Test
     fun `settings and add source both reach the Solcon account screen`() {
@@ -51,12 +51,18 @@ class SolconEndToEndWiringTest {
     }
 
     @Test
-    fun `preview and multiview also use the just in time Solcon resolver`() {
+    fun `preview multiview and external playback all use the just in time Solcon resolver`() {
         val live = source("src/main/java/tv/own/owntv/features/live/LiveViewModel.kt")
+        val preview = live.substringAfter("fun playPreview(channel: ChannelEntity)")
+            .substringBefore("// --- Multiview")
+        val multiview = live.substringAfter("fun tuneTile(engine:")
+            .substringBefore("/** Stalker preview")
+        val external = live.substringAfter("fun playExternal(channel: ChannelEntity)")
+            .substringBefore("/** Go full-screen")
 
-        assertTrue(live.contains("playPreview(resolved)"))
-        assertTrue(live.contains("tuneTile(engine, resolved, muted)"))
-        assertTrue(live.contains("val playableChannel = resolveSolconPlayback(channel)"))
+        assertTrue(preview.contains("resolveSolconPlayback(channel)"))
+        assertTrue(multiview.contains("resolveSolconPlayback(channel)"))
+        assertTrue(external.contains("resolveSolconPlayback(channel, notifyFailure = true)"))
     }
 
     @Test
