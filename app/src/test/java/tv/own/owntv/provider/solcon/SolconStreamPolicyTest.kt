@@ -2,6 +2,7 @@ package tv.own.owntv.provider.solcon
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,6 +23,23 @@ class SolconStreamPolicyTest {
         assertEquals(SolconStreamPolicy.Transport.UDP_MULTICAST, decision.transport)
         assertEquals("udp://239.255.1.2:5000", decision.normalizedUrl)
         assertTrue(decision.isMulticast)
+    }
+
+    @Test
+    fun `tvplus live uri is provider resolved rather than ordinary media`() {
+        val decision = SolconStreamPolicy.classify("solcon-tvplus://live/12345")
+
+        assertNotEquals(SolconStreamPolicy.Transport.OTHER, decision.transport)
+        assertFalse(decision.isMulticast)
+        assertEquals("solcon-tvplus://live/12345", decision.normalizedUrl)
+    }
+
+    @Test
+    fun `tvplus uri without numeric live id fails closed`() {
+        val decision = SolconStreamPolicy.classify("solcon-tvplus://live/not-a-channel")
+
+        assertEquals(SolconStreamPolicy.Transport.OTHER, decision.transport)
+        assertFalse(decision.isMulticast)
     }
 
     @Test
