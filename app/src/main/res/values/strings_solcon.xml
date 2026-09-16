@@ -2,6 +2,7 @@
 <resources>
     <string name="solcon_tvplus_title">Solcon TV+</string>
     <string name="solcon_tvplus_chooser_subtitle">Sign in with your subscription number and PIN</string>
+    <string name="solcon_tvplus_settings_description">Login, subscription and synchronization</string>
     <string name="solcon_tvplus_login_description">Use the same subscription number and PIN you use in the official Solcon TV+ app.</string>
     <string name="solcon_tvplus_subscription_number">Subscription number</string>
     <string name="solcon_tvplus_subscription_placeholder">Enter subscription number</string>
