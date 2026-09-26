@@ -697,6 +697,18 @@ fun LiveScreen(
                             val isPreviewed by remember(channel.id) {
                                 androidx.compose.runtime.derivedStateOf { previewChannel?.id == channel.id }
                             }
+                            // The remembered channel (targetChannelId above), derived per row the same way,
+                            // so a D-pad step moves the focus target without recomposing every visible row.
+                            val isTarget by remember(channel.id) {
+                                androidx.compose.runtime.derivedStateOf {
+                                    val target = if (rememberLive) {
+                                        perCategoryChannelIds[selectedKey] ?: previewChannel?.id
+                                    } else {
+                                        previewChannel?.id
+                                    }
+                                    target == channel.id
+                                }
+                            }
                             ChannelRow(
                                 channel = channel,
                                 isFavorite = favoriteIds.contains(channel.id),
@@ -714,11 +726,7 @@ fun LiveScreen(
                                 modifier = Modifier.gridFocusTarget(
                                     itemId = channel.id, index = index,
                                     contextId = contextChannelId, contextFocus = contextFocus,
-<<<<<<< HEAD
-                                    selectedId = if (isPreviewed) channel.id else null, selectedFocus = selFocus,
-=======
-                                    selectedId = targetChannelId, selectedFocus = selFocus,
->>>>>>> refs/rewritten/Merge-PR-210-steadier-category-navigation-in-Live-TV-Movies-and-Series
+                                    selectedId = if (isTarget) channel.id else null, selectedFocus = selFocus,
                                     firstItemFocus = firstItemFocus,
                                 ),
                                 onFocus = {
