@@ -36,9 +36,9 @@ import tv.own.owntv.core.theme.GlassSurface
 import tv.own.owntv.ui.theme.OwnTVTheme
 
 /**
- * First step of "Add source": pick **Remote** (fill the form on another device over the LAN) or **Manual**
- * (type Xtream / M3U / Stalker here with the remote). Shared by the setup wizard and Settings → Manage
- * sources so both entry points offer the same choice.
+ * First step of "Add source": pick **Remote** (fill the form on another device over the LAN), **Solcon TV+**
+ * (sign in to the subscription) or **Manual** (type Xtream / M3U / Stalker here with the remote). Shared by
+ * the setup wizard and Settings → Manage sources so both entry points offer the same choice.
  */
 @Composable
 fun AddSourceChooserScreen(
@@ -104,14 +104,14 @@ private fun ChooserCard(
     val colors = OwnTVTheme.colors
     FocusableSurface(
         onClick = onClick,
-        modifier = modifier.size(width = 224.dp, height = 174.dp),
+        modifier = modifier.size(width = 272.dp, height = 174.dp),
         shape = RoundedCornerShape(22.dp),
         focusedContainerColor = colors.surfaceContainerHighest,
         unfocusedContainerColor = colors.surfaceContainerHigh,
         contentAlignment = Alignment.Center,
         surface = GlassSurface.CARDS,
     ) { focused ->
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.padding(horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(colors.primaryContainer),
                 contentAlignment = Alignment.Center,
@@ -121,7 +121,8 @@ private fun ChooserCard(
             Spacer(Modifier.height(14.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, color = if (focused) colors.primary else colors.onSurface)
             Spacer(Modifier.height(4.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
+            // Two lines kept for every subtitle, so the icons and titles of the cards side by side line up.
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, textAlign = TextAlign.Center, minLines = 2)
         }
     }
 }
