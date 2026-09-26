@@ -80,12 +80,11 @@ fun SolconTvPlusAccountScreen(
         radio = stringResource(R.string.solcon_tvplus_radio_category),
     )
 
+    LaunchedEffect(vm) {
+        vm.onScreenShown()
+        vm.synced.collect { synchronizedCallback?.invoke() }
+    }
     LaunchedEffect(state) {
-        val connected = state as? SolconTvPlusViewModel.UiState.Connected
-        if (connected?.summary != null && synchronizedCallback != null) {
-            synchronizedCallback?.invoke()
-            return@LaunchedEffect
-        }
         if (state !is SolconTvPlusViewModel.UiState.Busy) {
             kotlinx.coroutines.delay(80)
             runCatching { firstFocus.requestFocus() }

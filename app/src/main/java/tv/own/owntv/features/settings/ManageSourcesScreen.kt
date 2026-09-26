@@ -168,7 +168,6 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         if (managingSolcon) {
             SolconTvPlusAccountScreen(
                 onBack = { managingSolcon = false },
-                onSynchronized = { managingSolcon = false },
                 modifier = Modifier,
             )
         } else if (editingSource != null) {

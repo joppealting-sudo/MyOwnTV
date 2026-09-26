@@ -2,8 +2,11 @@ package tv.own.owntv.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusClient
@@ -43,6 +46,25 @@ class SolconTvPlusViewModel(
 
     private val _error = MutableStateFlow<ErrorKind?>(null)
     val error: StateFlow<ErrorKind?> = _error.asStateFlow()
+
+    /**
+     * A sync that just finished, told only to whoever watches at that moment. The state keeps its summary
+     * for as long as the app runs, so a screen reopened later must not take that as a sync it asked for.
+     */
+    private val _synced = MutableSharedFlow<SolconTvPlusRepository.SyncSummary>(extraBufferCapacity = 1)
+    val synced: SharedFlow<SolconTvPlusRepository.SyncSummary> = _synced.asSharedFlow()
+
+    /** The screen opened again: forget the last visit's message and show the session as it is now. */
+    fun onScreenShown() {
+        _error.value = null
+        val current = _state.value
+        if (current is UiState.Busy) return
+        _state.value = when {
+            !repository.isLoggedIn() -> UiState.SignedOut
+            current is UiState.SignedOut -> UiState.Connected()
+            else -> current
+        }
+    }
 
     /**
      * Sign in and sync straight away. [profileId] is the profile the playlist is added to — the one being
@@ -101,7 +123,10 @@ class SolconTvPlusViewModel(
     private suspend fun syncInternal(names: CatalogNames, profileId: Long?) {
         _state.value = UiState.Busy(BusyPhase.SYNC)
         repository.sync(names.source, names.tv, names.radio, profileId)
-            .onSuccess { _state.value = UiState.Connected(it) }
+            .onSuccess {
+                _state.value = UiState.Connected(it)
+                _synced.tryEmit(it)
+            }
             .onFailure { failure ->
                 if (failure is SolconTvPlusClient.NotAuthenticatedException) {
                     // Solcon no longer accepts the stored session: say so and ask for the PIN again,
