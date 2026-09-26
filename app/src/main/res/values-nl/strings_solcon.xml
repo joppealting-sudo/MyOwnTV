@@ -54,6 +54,11 @@
     <string name="solcon_tvplus_status_server_found">Gevonden voor je abonnement</string>
     <string name="solcon_tvplus_status_server_standard">Standaardserver van Solcon</string>
     <string name="solcon_tvplus_status_server_compat">Compatibiliteitsserver</string>
+    <string name="solcon_tvplus_status_network">Netwerk</string>
+    <string name="solcon_tvplus_status_network_wired">Bekabeld (ethernet)</string>
+    <string name="solcon_tvplus_status_network_wifi">Wi-Fi</string>
+    <string name="solcon_tvplus_status_network_other">Andere verbinding</string>
+    <string name="solcon_tvplus_status_network_none">Niet verbonden</string>
     <string name="solcon_tvplus_status_playback">Laatste zender</string>
     <string name="solcon_tvplus_status_playback_clear">Gewone stream</string>
     <string name="solcon_tvplus_status_playback_multicast">Multicast</string>

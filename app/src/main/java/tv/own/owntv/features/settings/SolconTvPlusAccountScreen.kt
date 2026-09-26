@@ -1,5 +1,8 @@
 package tv.own.owntv.features.settings
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -70,6 +73,9 @@ fun SolconTvPlusAccountScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val diagnostics by vm.diagnostics.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // Read again whenever the account state moves on, e.g. after a sync that failed for want of a network.
+    val network = remember(state) { currentNetworkKind(context) }
     val firstFocus = remember { FocusRequester() }
     val synchronizedCallback by rememberUpdatedState(onSynchronized)
     var subscriptionNumber by remember { mutableStateOf(String()) }
@@ -96,6 +102,7 @@ fun SolconTvPlusAccountScreen(
         state = state,
         error = error,
         diagnostics = diagnostics,
+        network = network,
         subscriptionNumber = subscriptionNumber,
         onSubscriptionNumberChange = { subscriptionNumber = it },
         pin = pin,
@@ -119,6 +126,7 @@ internal fun SolconTvPlusAccountContent(
     state: SolconTvPlusViewModel.UiState,
     error: SolconTvPlusViewModel.ErrorKind?,
     diagnostics: SolconDiagnostics.Snapshot,
+    network: NetworkKind,
     subscriptionNumber: String,
     onSubscriptionNumberChange: (String) -> Unit,
     pin: String,
@@ -168,7 +176,7 @@ internal fun SolconTvPlusAccountContent(
                 }
             }
             Column(Modifier.weight(0.42f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                StatusCard(diagnostics)
+                StatusCard(diagnostics, network)
                 if (diagnostics.lastSyncAtMs == null) HowItWorksCard()
             }
         }
@@ -298,7 +306,7 @@ private fun ConnectedPanel(
 
 /** What OwnTV knows about the account, without anything private: all enums, counts and a timestamp. */
 @Composable
-private fun StatusCard(diagnostics: SolconDiagnostics.Snapshot) {
+private fun StatusCard(diagnostics: SolconDiagnostics.Snapshot, network: NetworkKind) {
     val colors = OwnTVTheme.colors
     val signedIn = diagnostics.sessionAuthenticated
     SolconCard {
@@ -331,6 +339,19 @@ private fun StatusCard(diagnostics: SolconDiagnostics.Snapshot) {
                 ),
             )
         }
+        // Multicast channels usually need the wired connection; this is the first thing to check when they stay dark.
+        StatusLine(
+            stringResource(R.string.solcon_tvplus_status_network),
+            stringResource(
+                when (network) {
+                    NetworkKind.WIRED -> R.string.solcon_tvplus_status_network_wired
+                    NetworkKind.WIFI -> R.string.solcon_tvplus_status_network_wifi
+                    NetworkKind.OTHER -> R.string.solcon_tvplus_status_network_other
+                    NetworkKind.NONE -> R.string.solcon_tvplus_status_network_none
+                },
+            ),
+            tone = if (network == NetworkKind.NONE) StatusTone.WARNING else StatusTone.NEUTRAL,
+        )
         diagnostics.lastPlaybackRoute?.let { route ->
             StatusLine(
                 stringResource(R.string.solcon_tvplus_status_playback),
@@ -373,6 +394,19 @@ private fun SolconCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 private enum class StatusTone { NEUTRAL, GOOD, WARNING }
+
+/** The kind of connection the TV is on; nothing more specific, so no address or network name is shown. */
+internal enum class NetworkKind { WIRED, WIFI, OTHER, NONE }
+
+private fun currentNetworkKind(context: Context): NetworkKind {
+    val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return NetworkKind.NONE
+    val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork) ?: return NetworkKind.NONE
+    return when {
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkKind.WIRED
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkKind.WIFI
+        else -> NetworkKind.OTHER
+    }
+}
 
 @Composable
 private fun StatusLine(label: String, value: String, tone: StatusTone = StatusTone.NEUTRAL) {

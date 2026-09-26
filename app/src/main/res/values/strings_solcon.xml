@@ -59,6 +59,11 @@
     <string name="solcon_tvplus_status_server_found">Found for your subscription</string>
     <string name="solcon_tvplus_status_server_standard">Solcon\'s standard server</string>
     <string name="solcon_tvplus_status_server_compat">Compatibility server</string>
+    <string name="solcon_tvplus_status_network">Network</string>
+    <string name="solcon_tvplus_status_network_wired">Wired (Ethernet)</string>
+    <string name="solcon_tvplus_status_network_wifi">Wi-Fi</string>
+    <string name="solcon_tvplus_status_network_other">Other connection</string>
+    <string name="solcon_tvplus_status_network_none">Not connected</string>
     <string name="solcon_tvplus_status_playback">Last channel</string>
     <string name="solcon_tvplus_status_playback_clear">Standard stream</string>
     <string name="solcon_tvplus_status_playback_multicast">Multicast</string>
