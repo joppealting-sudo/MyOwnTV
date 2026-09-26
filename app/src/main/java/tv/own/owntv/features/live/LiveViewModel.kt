@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -129,6 +130,8 @@ class LiveViewModel(
     private val epgRepository: tv.own.owntv.core.repository.EpgRepository,
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
+    /** Solcon TV+ channels mint their stream just before they play; multicast opens on mpv. */
+    private val solcon: tv.own.owntv.provider.solcon.SolconPlayback,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -195,6 +198,7 @@ class LiveViewModel(
         profileId: Long,
         programme: tv.own.owntv.core.parser.XtEpgEntry?,
     ): tv.own.owntv.core.database.entity.RecordingEntity? {
+        if (!tv.own.owntv.provider.solcon.SolconPlayback.canRecord(channel.streamUrl)) return null
         if (recordings.canRecordOn(channel.sourceId) !is StreamGrant.Allowed) return null
         val startMs = System.currentTimeMillis()
         // Start now: the programme is already under way and a live edge cannot be rewound, so the
@@ -827,17 +831,20 @@ class LiveViewModel(
     private val live = tv.own.owntv.player.LiveTuneController(
         scope = viewModelScope,
         engines = tv.own.owntv.player.EnginePair(previewEngine, player),
-        host = tv.own.owntv.player.LiveTuneController.CoreHost(
-            context = appContext,
-            settings = settings,
-            sourceDao = sourceDao,
-            resolver = streamUrlResolver,
-            forceMpvStore = forceMpvStore,
-            label = ::channelNumberLabel,
-            // The warm playlist map, so a preview on a focus step never waits on the database.
-            sourceLookup = { id -> sourceById[id] },
-            // A handover re-opens the channel at its live edge: the rewind is over.
-            backToLiveEdge = { clearTimeshift() },
+        host = tv.own.owntv.provider.solcon.SolconTuneHost(
+            delegate = tv.own.owntv.player.LiveTuneController.CoreHost(
+                context = appContext,
+                settings = settings,
+                sourceDao = sourceDao,
+                resolver = streamUrlResolver,
+                forceMpvStore = forceMpvStore,
+                label = ::channelNumberLabel,
+                // The warm playlist map, so a preview on a focus step never waits on the database.
+                sourceLookup = { id -> sourceById[id] },
+                // A handover re-opens the channel at its live edge: the rewind is over.
+                backToLiveEdge = { clearTimeshift() },
+            ),
+            solcon = solcon,
         ),
     )
 
@@ -849,10 +856,90 @@ class LiveViewModel(
     /** In-pane preview playback (no history) — triggered by the UI after the focus settles. */
     fun playPreview(channel: ChannelEntity) {
         if (channel.categoryId != null && channel.categoryId in hiddenCategoryIds.value) return
+        solconPreviewJob?.cancel()
+        // The pane's engine, ExoPlayer, reads HTTP only: a multicast channel shows its logo and guide
+        // here and plays on mpv once opened.
+        if (tv.own.owntv.provider.solcon.SolconPlayback.isMulticast(channel.streamUrl)) {
+            solconPreviewChannel = null
+            // Never while promoted to full screen: that ExoPlayer stream is the one being watched.
+            if (!live.liveOnExo.value) live.stopExo()
+            return
+        }
+        if (tv.own.owntv.provider.solcon.SolconPlayback.isTvPlus(channel.streamUrl)) {
+            previewSolcon(channel)
+            return
+        }
+        solconPreviewChannel = null
         // Core keeps the preview off a promoted full-screen stream, re-mutes on a re-focus instead of
         // reloading, mints a Stalker link, and holds back on a one-session panel while mpv plays.
         live.preview(channel, muted = !livePreviewAudio.value)
     }
+
+    /** The Solcon TV+ channel prepared for the preview on screen, so a re-focus does not ask TV+ again. */
+    private var solconPreviewChannel: ChannelEntity? = null
+    private var solconPreviewJob: Job? = null
+
+    private fun previewSolcon(channel: ChannelEntity) {
+        val playing = solconPreviewChannel?.takeIf {
+            it.id == channel.id && previewEngine.currentUrl != null &&
+                previewEngine.state.value != tv.own.owntv.player.LivePreviewEngine.State.ERROR
+        }
+        if (playing != null) {
+            live.preview(playing, muted = !livePreviewAudio.value)
+            return
+        }
+        solconPreviewJob = viewModelScope.launch {
+            // Browsing stays quiet: a channel TV+ will not hand over just shows its logo in the pane.
+            val ready = solcon.prepare(channel) as? tv.own.owntv.provider.solcon.SolconPlayback.Prepared.Ready
+                ?: return@launch
+            solconPreviewChannel = ready.channel
+            live.preview(ready.channel, muted = !livePreviewAudio.value)
+        }
+    }
+
+    /** A Solcon channel the user picked will not play; [reason] is what the screen says about it. */
+    class SolconFailure(
+        val reason: Reason,
+        val atMs: Long = android.os.SystemClock.elapsedRealtime(),
+    ) {
+        enum class Reason { SIGN_IN_REQUIRED, NETWORK, PROTECTED, PROTECTED_EXTERNAL, UNAVAILABLE }
+
+        /** Still about the pick just made — a refusal nobody saw in time is not shown later. */
+        fun isFresh(nowMs: Long = android.os.SystemClock.elapsedRealtime()): Boolean = nowMs - atMs <= FRESH_MS
+
+        private companion object {
+            const val FRESH_MS = 10_000L
+        }
+    }
+
+    // Buffered, not a bare SharedFlow: a refusal can arrive before the full-screen player that shows it
+    // has composed (signed out needs no network round trip), and it must not be lost.
+    private val _solconFailures = kotlinx.coroutines.channels.Channel<SolconFailure>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    val solconFailures: Flow<SolconFailure> = _solconFailures.receiveAsFlow()
+
+    /** Prepare a picked Solcon channel for playback; null (and the reason on screen) when it cannot play. */
+    private suspend fun prepareOrReport(channel: ChannelEntity): ChannelEntity? =
+        when (val prepared = solcon.prepare(channel)) {
+            is tv.own.owntv.provider.solcon.SolconPlayback.Prepared.Ready -> prepared.channel
+            is tv.own.owntv.provider.solcon.SolconPlayback.Prepared.Failed -> {
+                Log.i(ENGINE_TAG, "'${channel.name}' — Solcon TV+ could not prepare it (${prepared.category.name})")
+                _solconFailures.trySend(
+                    SolconFailure(
+                        when (prepared.category) {
+                            tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NOT_AUTHENTICATED,
+                            tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.INVALID_CREDENTIALS,
+                            -> SolconFailure.Reason.SIGN_IN_REQUIRED
+                            tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.NETWORK ->
+                                SolconFailure.Reason.NETWORK
+                            tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory.PROTECTED_UNSUPPORTED ->
+                                SolconFailure.Reason.PROTECTED
+                            else -> SolconFailure.Reason.UNAVAILABLE
+                        },
+                    ),
+                )
+                null
+            }
+        }
 
     // --- Multiview: channels kept from the browse screen ------------------------------------------
     // The plan's second entry point: pick two to four channels from the Live list, then press play and
@@ -889,7 +976,12 @@ class LiveViewModel(
      * grid would drift the first time one of them changed.
      */
     fun tuneTile(engine: tv.own.owntv.player.LivePreviewEngine, channel: ChannelEntity, muted: Boolean) {
-        viewModelScope.launch { live.playTile(engine, channel, muted) }
+        viewModelScope.launch {
+            // A tile that cannot get its stream shows its failure, like any other tile.
+            val ready = solcon.prepare(channel) as? tv.own.owntv.provider.solcon.SolconPlayback.Prepared.Ready
+                ?: return@launch
+            live.playTile(engine, ready.channel, muted)
+        }
     }
 
     // The ordered channel list the player zaps within (CH+/CH-, D-pad up/down) and shows in the
@@ -1017,6 +1109,7 @@ class LiveViewModel(
 
     fun clearLiveOnExo() {
         // A live tune still in flight would otherwise start over whatever takes mpv now.
+        solconPreviewJob?.cancel()
         live.cancelTune()
         live.releaseForArchive()
     }
@@ -1266,24 +1359,35 @@ class LiveViewModel(
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
             if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return@launch
-            val source = withContext(Dispatchers.IO) { sourceDao.getById(channel.sourceId) }
-            val url = if (streamUrlResolver.needsResolve(source)) {
-                withContext(Dispatchers.IO) {
-                    runCatching { streamUrlResolver.resolve(source!!, channel.streamUrl) }
-                        .onFailure { Log.w(TAG, "stalker resolve failed channelId=${channel.id}", it) }
-                        .getOrNull()
-                } ?: return@launch
-            } else {
-                channel.streamUrl
-            }
-            externalPlayerLauncher.launch(
-                url = url,
-                title = channel.name,
-                userAgent = source?.userAgent,
-                httpHeaders = SourceOverrides.headersWithReferer(channel.httpHeaders, source),
-            )
-            recordLiveHistory(channel, immediate = true)
+            val playable = prepareOrReport(channel) ?: return@launch
+            launchExternal(channel, playable)
         }
+    }
+
+    /** Hand [playable] — [channel] as prepared by [prepareOrReport] — to the external app. */
+    private suspend fun launchExternal(channel: ChannelEntity, playable: ChannelEntity) {
+        // #115: no intent extra carries a licence, so a protected stream would open there and fail.
+        if (playable.drmConfig != null) {
+            _solconFailures.trySend(SolconFailure(SolconFailure.Reason.PROTECTED_EXTERNAL))
+            return
+        }
+        val source = withContext(Dispatchers.IO) { sourceDao.getById(channel.sourceId) }
+        val url = when {
+            solcon.ownsSource(source) -> solcon.resolveUrl(playable.streamUrl)
+            streamUrlResolver.needsResolve(source) -> withContext(Dispatchers.IO) {
+                runCatching { streamUrlResolver.resolve(source!!, playable.streamUrl) }
+                    .onFailure { Log.w(TAG, "stalker resolve failed channelId=${channel.id}", it) }
+                    .getOrNull()
+            }
+            else -> playable.streamUrl
+        } ?: return
+        externalPlayerLauncher.launch(
+            url = url,
+            title = channel.name,
+            userAgent = source?.userAgent,
+            httpHeaders = SourceOverrides.headersWithReferer(playable.httpHeaders, source),
+        )
+        recordLiveHistory(channel, immediate = true)
     }
 
     /** Go full-screen on [channel]. Cancels any pending direct-tune zap rebuild first, so normal
@@ -1311,19 +1415,25 @@ class LiveViewModel(
      *  channel. Direct-tune's background rebuild path calls this without cancelling the rebuild
      *  so the in-flight rebuild it owns isn't killed by its own play. */
     private suspend fun playChannel(channel: ChannelEntity) {
+        // A Solcon preview still asking TV+ for its stream must not start a second picture under this one.
+        solconPreviewJob?.cancel()
         val pid = currentProfileId() ?: return
         if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return
+        // A Solcon TV+ channel gets its stream headers and any licence now; one TV+ will not hand over
+        // stays unplayed (the reason goes on screen) and whatever was playing keeps playing.
+        val playable = prepareOrReport(channel) ?: return
+        solconPlayingMulticast = tv.own.owntv.provider.solcon.SolconPlayback.isMulticast(playable.streamUrl)
         // Live TV set to play externally: hand the channel over instead of tuning an in-app engine.
         // History is still recorded, so the channel shows up in History/Recently watched either way.
         // #115 — a protected channel stays in-app whatever this setting says: no standard intent extra
         // carries a licence URL, so the external player would open it and fail immediately.
-        if (externalPlayerOn.value && channel.drmConfig == null) { playExternal(channel); return }
+        if (externalPlayerOn.value && playable.drmConfig == null) { launchExternal(channel, playable); return }
         _previewChannel.value = channel
         clearTimeshift() // normal live = not timeshifted
         _catchupActive.value = false // tuning live ends any archive playback the HUD was showing
         // Core routes it (DRM, the pin, a learned panel refusal, the playlist, the setting), arms the
         // ladder and starts the engine — the same code the phone runs.
-        live.start(channel, getSource(channel.sourceId))
+        live.start(playable, getSource(channel.sourceId))
         recordLiveHistory(channel)
     }
 
@@ -1335,8 +1445,13 @@ class LiveViewModel(
         // Same while rewound into the live archive: swapping engines re-opens the channel at the edge.
         // Not for a copy saved on this device (N4): the other engine continues it at the same moment.
         if (timeshift.isRewound && live.localTimeshift.value == null) return
+        // Multicast plays on mpv only; ExoPlayer here reads HTTP, so there is nothing to switch to.
+        if (solconPlayingMulticast) return
         live.toggleEngine()
     }
+
+    /** The channel full-screen is IPTV multicast, which only mpv can play. */
+    private var solconPlayingMulticast = false
 
     /**
      * N2 — tune the channel watched before this one (the remote's "last channel" key). Re-read by id, so
@@ -1470,6 +1585,7 @@ class LiveViewModel(
 
     /** Replay a past programme from the channel's archive (seekable, like the Guide's "Watch from start"). */
     fun playCatchupProgramme(ch: ChannelEntity, programme: tv.own.owntv.core.database.entity.EpgProgrammeEntity) {
+        solconPreviewJob?.cancel()
         // The controller's one tune job: a live tune still resolving is cancelled rather than starting
         // over the programme a moment later.
         live.launch {
@@ -1679,6 +1795,8 @@ class LiveViewModel(
     }
 
     fun stopPreview() {
+        solconPreviewJob?.cancel()
+        solconPreviewChannel = null
         live.stop() // both engines, every watcher and the give-up alarm, and the reconnect link
         _previewChannel.value = null
     }

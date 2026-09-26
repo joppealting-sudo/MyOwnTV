@@ -371,6 +371,8 @@ dependencies {
     // Lifecycle / Navigation
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // ProcessLifecycleOwner: the Wi-Fi multicast lock is let go when OwnTV leaves the screen.
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.navigation.compose)
 
     // Preferences

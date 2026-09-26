@@ -524,6 +524,20 @@ fun OwnTVShell(
         runCatching { sidebarFocus.requestFocus() }
         Unit
     }
+    // A Solcon channel that will not play, picked from anywhere — the Live list, the Guide, a channel
+    // switch or the external-player hand-off: say why, and close a full screen opened for a channel that
+    // never started. A failed channel switch leaves the previous channel playing instead.
+    val solconToast = tv.own.owntv.ui.components.rememberInAppToast()
+    val solconFailureText by rememberUpdatedState(tv.own.owntv.features.settings.rememberSolconFailureText())
+    val solconLeavePlayer by rememberUpdatedState(exitPlayer)
+    LaunchedEffect(liveVm) {
+        liveVm.solconFailures.collect { failure ->
+            if (!failure.isFresh()) return@collect
+            solconToast.show(solconFailureText(failure.reason))
+            val nothingPlaying = !liveVm.liveOnExo.value && !player.hasActiveStream
+            if (playerMode == PlayerMode.FULLSCREEN && nothingPlaying) solconLeavePlayer()
+        }
+    }
     /**
      * Turn the channel on screen into tile 1 of the grid, with [extra] filling the tiles after it.
      *
@@ -1448,7 +1462,7 @@ fun OwnTVShell(
                     // The engine does not come into it. Recording fetches the channel itself rather
                     // than copying the open stream, so it works the same whichever engine is playing.
                     onRecordThis = previewChannel
-                        ?.takeIf { recordWatchingEnabled && isTunedLive }
+                        ?.takeIf { recordWatchingEnabled && isTunedLive && tv.own.owntv.provider.solcon.SolconPlayback.canRecord(it.streamUrl) }
                         ?.let { channel -> { liveVm.togglePlayerRecording(channel) } },
                     recordingThis = playerRecording != null,
                     onOpenHistoryList = if (isTunedLive) { { showHistoryList = true } } else null,
@@ -1762,6 +1776,7 @@ fun OwnTVShell(
                 )
             }
         }
+        tv.own.owntv.ui.components.InAppToast(solconToast)
     }
     }
 }

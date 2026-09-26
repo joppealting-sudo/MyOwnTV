@@ -213,7 +213,8 @@ class EpgViewModel(
      * within a catch-up channel's archive.
      */
     fun canRecord(channel: ChannelEntity, programme: EpgProgrammeEntity, now: Long): Boolean =
-        programme.stopMs > now || canCatchup(channel, programme, now)
+        tv.own.owntv.provider.solcon.SolconPlayback.canRecord(channel.streamUrl) &&
+            (programme.stopMs > now || canCatchup(channel, programme, now))
 
     fun stopRecording(recording: tv.own.owntv.core.database.entity.RecordingEntity) =
         recordings.stop(recording)

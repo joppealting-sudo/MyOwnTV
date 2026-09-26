@@ -853,7 +853,11 @@ fun LiveScreen(
             onMatchEpg = { matchingEpg = ch; contextChannel = null },
             onEpgOffset = { offsettingEpg = ch; contextChannel = null },
             onCatchup = { catchupChannel = ch; contextChannel = null },
-            onRecord = { vm.recordNow(ch); contextChannel = null },
+            onRecord = if (tv.own.owntv.provider.solcon.SolconPlayback.canRecord(ch.streamUrl)) {
+                { vm.recordNow(ch); contextChannel = null }
+            } else {
+                null
+            },
             onPlayExternal = { vm.playExternal(ch); contextChannel = null },
             // Only offered once Multiview is switched on. Adding is silent apart from the toast: the
             // grid opens when the user plays a channel, which is the gesture that says "now".
@@ -1042,7 +1046,8 @@ private fun ChannelContextMenu(
     onMatchEpg: () -> Unit,
     onEpgOffset: () -> Unit,
     onCatchup: () -> Unit,
-    onRecord: () -> Unit,
+    // Null for a channel the recorder cannot fetch (Solcon TV+, multicast).
+    onRecord: (() -> Unit)?,
     onPlayExternal: () -> Unit,
     // Null unless Multiview is switched on: keep this channel for the grid (Plan D, B5).
     onAddToMultiview: (() -> Unit)?,
@@ -1079,7 +1084,7 @@ private fun ChannelContextMenu(
                 if (hasCatchup) add(MenuAction("catchup", stringResource(R.string.content_catchup), group = 1, onClick = onCatchup))
                 // Record this channel from now. The guide's Record needs a programme, so a channel
                 // the provider publishes no guide for can only be recorded from here.
-                add(MenuAction("record", stringResource(R.string.recording_record), OwnTVIcon.LIVE_TV, group = 1, onClick = onRecord))
+                if (onRecord != null) add(MenuAction("record", stringResource(R.string.recording_record), OwnTVIcon.LIVE_TV, group = 1, onClick = onRecord))
                 // Always offered, regardless of the Live TV external-player default — this is the per-channel
                 // escape hatch for a stream neither in-app engine can open (same as Movies/Series/Downloads).
                 add(MenuAction("play_external", stringResource(R.string.content_play_external_short), OwnTVIcon.PLAY, group = 1, onClick = onPlayExternal))
