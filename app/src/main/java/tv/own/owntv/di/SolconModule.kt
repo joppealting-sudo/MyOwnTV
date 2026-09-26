@@ -1,6 +1,7 @@
 package tv.own.owntv.di
 
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -9,8 +10,11 @@ import tv.own.owntv.features.settings.SolconTvPlusViewModel
 import tv.own.owntv.provider.solcon.MulticastLock
 import tv.own.owntv.provider.solcon.SolconPlayback
 import tv.own.owntv.provider.solcon.WifiMulticastLock
+import tv.own.owntv.provider.solcon.tvplus.RoomSolconCatalogStore
 import tv.own.owntv.provider.solcon.tvplus.SolconAutoRefresh
+import tv.own.owntv.provider.solcon.tvplus.SolconCatalogStore
 import tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics
+import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusApi
 import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusClient
 import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusRepository
 import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusSessionStore
@@ -19,7 +23,8 @@ import tv.own.owntv.provider.solcon.tvplus.SolconTvPlusSessionStore
 val solconModule = module {
     single { SolconTvPlusSessionStore(androidContext()) }
     single { SolconDiagnostics(androidContext()) }
-    singleOf(::SolconTvPlusClient)
+    singleOf(::SolconTvPlusClient) { bind<SolconTvPlusApi>() }
+    singleOf(::RoomSolconCatalogStore) { bind<SolconCatalogStore>() }
     singleOf(::SolconTvPlusRepository)
     single<MulticastLock> { WifiMulticastLock(androidContext()) }
     single { SolconPlayback(repository = get<SolconTvPlusRepository>(), multicastLock = get()) }

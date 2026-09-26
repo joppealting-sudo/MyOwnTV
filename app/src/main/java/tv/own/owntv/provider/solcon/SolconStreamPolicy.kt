@@ -7,7 +7,8 @@ import java.net.URI
  *
  * Only numeric IPv4 multicast destinations are accepted. Host names are intentionally never resolved
  * here: classification must not perform network I/O or accidentally redirect an ordinary stream into
- * the multicast engine. TV+ synthetic URLs are accepted only for the exact live-channel shape.
+ * the multicast engine. TV+ synthetic URLs are accepted only for the exact live-channel shape:
+ * `solcon-tvplus://live/<channel id>`, optionally followed by `/<stream asset id>`.
  */
 object SolconStreamPolicy {
     enum class Transport {
@@ -28,13 +29,16 @@ object SolconStreamPolicy {
             get() = transport == Transport.TVPLUS_PROVIDER
     }
 
-    private val tvPlusLive = Regex("^solcon-tvplus://live/([0-9]+)$", RegexOption.IGNORE_CASE)
+    /** A TV+ channel reference: the channel, and the stream asset Solcon listed for it when it named one. */
+    data class TvPlusLive(val channelId: String, val assetId: String?)
+
+    private val tvPlusLivePattern = Regex("^solcon-tvplus://live/([0-9]+)(?:/([A-Za-z0-9][A-Za-z0-9._-]{0,63}))?$", RegexOption.IGNORE_CASE)
 
     fun classify(url: String): Decision {
         val trimmed = url.trim()
         if (trimmed.isEmpty()) return Decision(Transport.OTHER, trimmed)
 
-        if (tvPlusLive.matches(trimmed)) {
+        if (tvPlusLivePattern.matches(trimmed)) {
             return Decision(Transport.TVPLUS_PROVIDER, trimmed)
         }
 
@@ -59,8 +63,10 @@ object SolconStreamPolicy {
         return Decision(transport = transport, normalizedUrl = normalized)
     }
 
-    fun tvPlusLiveId(url: String): String? =
-        tvPlusLive.matchEntire(url.trim())?.groupValues?.getOrNull(1)
+    fun tvPlusLive(url: String): TvPlusLive? =
+        tvPlusLivePattern.matchEntire(url.trim())?.let { match ->
+            TvPlusLive(channelId = match.groupValues[1], assetId = match.groupValues[2].ifEmpty { null })
+        }
 
     private fun isIpv4Multicast(host: String): Boolean {
         val parts = host.split('.')

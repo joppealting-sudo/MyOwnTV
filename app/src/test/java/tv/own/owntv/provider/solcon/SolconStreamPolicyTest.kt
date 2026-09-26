@@ -35,6 +35,24 @@ class SolconStreamPolicyTest {
     }
 
     @Test
+    fun `tvplus uri can carry the channel's stream asset`() {
+        val reference = "solcon-tvplus://live/12345/A-77.hd"
+
+        assertTrue(SolconStreamPolicy.classify(reference).isTvPlus)
+        assertEquals(SolconStreamPolicy.TvPlusLive("12345", "A-77.hd"), SolconStreamPolicy.tvPlusLive(reference))
+        assertEquals(SolconStreamPolicy.TvPlusLive("12345", null), SolconStreamPolicy.tvPlusLive("solcon-tvplus://live/12345"))
+    }
+
+    @Test
+    fun `tvplus asset outside the plain identifier shape fails closed`() {
+        assertEquals(SolconStreamPolicy.Transport.OTHER, SolconStreamPolicy.classify("solcon-tvplus://live/1/a b").transport)
+        assertEquals(null, SolconStreamPolicy.tvPlusLive("solcon-tvplus://live/1/../2"))
+        assertEquals(null, SolconStreamPolicy.tvPlusLive("solcon-tvplus://live/1/"))
+        // A dot segment would be resolved away in the request path and reach a different endpoint.
+        assertEquals(null, SolconStreamPolicy.tvPlusLive("solcon-tvplus://live/1/.."))
+    }
+
+    @Test
     fun `tvplus uri without numeric live id fails closed`() {
         val decision = SolconStreamPolicy.classify("solcon-tvplus://live/not-a-channel")
 

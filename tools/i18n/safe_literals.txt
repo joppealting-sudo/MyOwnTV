@@ -639,7 +639,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconPlayback.kt	overrun_nonfatal
 1	url	app/src/main/java/tv/own/owntv/provider/solcon/SolconPlayback.kt	udp://
 1	url	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	$scheme://$host:$port
-1	regex	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	^solcon-tvplus://live/([0-9]+)$
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	^solcon-tvplus://live/([0-9]+)(?:/([A-Za-z0-9][A-Za-z0-9._-]{0,63}))?$
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	rtp
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	udp
 1	log	app/src/main/java/tv/own/owntv/provider/solcon/WifiMulticastLock.kt	SolconMulticast
@@ -837,11 +837,13 @@
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevine
 1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevineLicenseUrl
 2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	xmltvId
-1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${item.id}
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${channel.id}
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${channel.id}/$asset
 1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Invalid Solcon TV+ channel reference
 1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	No profile to add Solcon TV+ to
 1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ playback request failed
 1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ returned no subscribed channels
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	[A-Za-z0-9][A-Za-z0-9._-]{0,63}
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-radio
 1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tv
 1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tvplus://account

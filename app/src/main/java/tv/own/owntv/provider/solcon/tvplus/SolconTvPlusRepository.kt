@@ -2,21 +2,15 @@ package tv.own.owntv.provider.solcon.tvplus
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import tv.own.owntv.core.database.dao.CategoryDao
-import tv.own.owntv.core.database.dao.ChannelDao
-import tv.own.owntv.core.database.dao.EpgDao
-import tv.own.owntv.core.database.dao.SourceDao
 import tv.own.owntv.core.database.entity.CategoryEntity
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
-import tv.own.owntv.core.database.entity.ProfileSourceCrossRef
 import tv.own.owntv.core.database.entity.SourceEntity
 import tv.own.owntv.core.drm.DrmConfig
 import tv.own.owntv.core.model.MediaType
 import tv.own.owntv.core.model.SourceType
 import tv.own.owntv.core.network.StreamHeaders
-import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.provider.solcon.SolconStreamPolicy
 import tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.ErrorCategory
 import tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.FailureDetail
@@ -28,12 +22,8 @@ import tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.Step
  * of their own. Signed playback links stay ephemeral and are never written to Room.
  */
 class SolconTvPlusRepository(
-    private val client: SolconTvPlusClient,
-    private val sourceDao: SourceDao,
-    private val categoryDao: CategoryDao,
-    private val channelDao: ChannelDao,
-    private val epgDao: EpgDao,
-    private val settings: SettingsRepository,
+    private val client: SolconTvPlusApi,
+    private val store: SolconCatalogStore,
     private val diagnostics: SolconDiagnostics,
 ) {
     class EmptyCatalogException : IllegalStateException("Solcon TV+ returned no subscribed channels")
@@ -119,7 +109,7 @@ class SolconTvPlusRepository(
         }
 
     private suspend fun activeProfileOrThrow(): Long =
-        settings.activeProfileIdNow().takeIf { it >= 0 } ?: throw NoProfileException()
+        store.activeProfileId().takeIf { it >= 0 } ?: throw NoProfileException()
 
     private suspend fun syncLocked(
         sourceName: String,
@@ -133,23 +123,23 @@ class SolconTvPlusRepository(
             val sourceId = ensureSource(addTo(), sourceName)
             val categoryIds = ensureCategories(sourceId, tvCategoryName, radioCategoryName)
 
-            val existing = channelDao.findByRemoteIds(sourceId, channels.map { it.id })
+            val existing = store.channelsByRemoteId(sourceId, channels.map { it.id })
                 .mapNotNull { row -> row.remoteId?.let { it to row.id } }
                 .toMap()
-            channelDao.upsertAll(
+            store.upsertChannels(
                 channelRows(channels, sourceId, tvCategoryId = categoryIds.getValue(TV_CATEGORY), radioCategoryId = categoryIds.getValue(RADIO_CATEGORY), existingIds = existing),
             )
-            val stale = channelDao.remoteIdsForSource(sourceId).toSet() - channels.map { it.id }.toSet()
-            if (stale.isNotEmpty()) channelDao.deleteByRemoteIds(sourceId, stale.toList())
+            val stale = store.channelRemoteIds(sourceId).toSet() - channels.map { it.id }.toSet()
+            if (stale.isNotEmpty()) store.deleteChannels(sourceId, stale.toList())
 
-            epgDao.clearChannelsForSource(sourceId)
-            epgDao.upsertChannels(
+            store.replaceGuideChannels(
+                sourceId,
                 channels.map { item ->
                     EpgChannelEntity(sourceId = sourceId, epgChannelId = epgKey(item), displayName = item.name, iconUrl = item.logoUrl)
                 },
             )
             val guide = syncGuide(sourceId, channels)
-            sourceDao.markSynced(sourceId, System.currentTimeMillis())
+            store.markSynced(sourceId, System.currentTimeMillis())
             SyncSummary(
                 channels = channels.size,
                 radioChannels = channels.count { it.radio },
@@ -193,21 +183,25 @@ class SolconTvPlusRepository(
             }
             val rows = programmeRows(entries, sourceId, channels)
             // Only this batch's channels are replaced, and only once their new guide is in hand.
-            epgDao.deleteProgrammesForChannels(sourceId, batch.map { epgKey(it) })
-            if (rows.isNotEmpty()) epgDao.upsertProgrammes(rows)
+            store.replaceProgrammes(sourceId, batch.map { epgKey(it) }, rows)
             programmes += rows.size
         }
-        epgDao.pruneOutsideWindow(sourceId, start, end)
+        store.pruneProgrammes(sourceId, start, end)
         return GuideResult(programmes, complete)
     }
 
     /** The stream behind a channel's `solcon-tvplus://live/<id>` [reference], asked for right now. */
     suspend fun resolveLive(reference: String): ResolvedPlayback {
-        val id = SolconStreamPolicy.tvPlusLiveId(reference) ?: run {
+        val live = SolconStreamPolicy.tvPlusLive(reference) ?: run {
             diagnostics.recordError(ErrorCategory.PROTOCOL, FailureDetail(Step.PLAYBACK))
             return ResolvedPlayback.Failed(ErrorCategory.PROTOCOL, "Invalid Solcon TV+ channel reference")
         }
-        return client.resolveLivePlayback(id).fold(
+        var answer = client.resolveLivePlayback(live.channelId, live.assetId)
+        // The asset is read from the channel list by best guess; when Solcon refuses it, ask by the channel alone.
+        if (live.assetId != null && answer.getOrNull() is SolconTvPlusProtocol.Playback.Error) {
+            answer = client.resolveLivePlayback(live.channelId, null)
+        }
+        return answer.fold(
             onSuccess = { playback ->
                 when (playback) {
                     is SolconTvPlusProtocol.Playback.Clear -> {
@@ -263,17 +257,16 @@ class SolconTvPlusRepository(
         )
     }
 
-    suspend fun existingSourceId(): Long? =
-        sourceDao.getAllOnce().firstOrNull { it.url == SOURCE_URL }?.id
+    suspend fun existingSourceId(): Long? = store.sourceByUrl(SOURCE_URL)?.id
 
     /** The Solcon playlist's id, created on first use and added to [profileId] when one is given. */
     private suspend fun ensureSource(profileId: Long?, sourceName: String): Long {
-        val existing = sourceDao.getAllOnce().firstOrNull { it.url == SOURCE_URL }
+        val existing = store.sourceByUrl(SOURCE_URL)
         val id = if (existing != null) {
-            if (existing.name != sourceName) sourceDao.update(existing.copy(name = sourceName))
+            if (existing.name != sourceName) store.updateSource(existing.copy(name = sourceName))
             existing.id
         } else {
-            sourceDao.insert(
+            store.insertSource(
                 SourceEntity(
                     name = sourceName,
                     type = SourceType.M3U,
@@ -284,7 +277,7 @@ class SolconTvPlusRepository(
                 ),
             )
         }
-        if (profileId != null) sourceDao.link(ProfileSourceCrossRef(profileId = profileId, sourceId = id))
+        if (profileId != null) store.linkSource(profileId, id)
         return id
     }
 
@@ -293,12 +286,12 @@ class SolconTvPlusRepository(
             CategoryEntity(sourceId = sourceId, mediaType = MediaType.LIVE, name = tvName, remoteId = TV_CATEGORY, sortOrder = 0),
             CategoryEntity(sourceId = sourceId, mediaType = MediaType.LIVE, name = radioName, remoteId = RADIO_CATEGORY, sortOrder = 1),
         )
-        val existing = categoryDao.findByRemoteIds(sourceId, MediaType.LIVE, desired.mapNotNull { it.remoteId }).associateBy { it.remoteId }
+        val existing = store.liveCategories(sourceId, desired.mapNotNull { it.remoteId }).associateBy { it.remoteId }
         val toUpdate = desired.mapNotNull { row -> existing[row.remoteId]?.let { row.copy(id = it.id) } }
         val toInsert = desired.filter { it.remoteId !in existing }
-        if (toUpdate.isNotEmpty()) categoryDao.updateAll(toUpdate)
-        if (toInsert.isNotEmpty()) categoryDao.insertAll(toInsert)
-        return categoryDao.findByRemoteIds(sourceId, MediaType.LIVE, desired.mapNotNull { it.remoteId })
+        if (toUpdate.isNotEmpty()) store.updateCategories(toUpdate)
+        if (toInsert.isNotEmpty()) store.insertCategories(toInsert)
+        return store.liveCategories(sourceId, desired.mapNotNull { it.remoteId })
             .associate { requireNotNull(it.remoteId) to it.id }
     }
 
@@ -321,6 +314,16 @@ class SolconTvPlusRepository(
         private const val EPG_CHANNEL_BATCH = 10
         private const val EPG_BACK_MS = 7L * 24L * 60L * 60L * 1000L
         private const val EPG_FORWARD_MS = 2L * 24L * 60L * 60L * 1000L
+        private val SAFE_ASSET = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+        /**
+         * The stable reference a channel is stored under, never a signed link: `solcon-tvplus://live/<id>`,
+         * plus `/<asset>` when Solcon lists a separate stream asset for the channel.
+         */
+        internal fun liveReference(channel: SolconTvPlusProtocol.LiveChannel): String {
+            val asset = channel.assetId?.trim()?.takeIf { it != channel.id && SAFE_ASSET.matches(it) }
+            return if (asset == null) "$TVPLUS_LIVE_PREFIX${channel.id}" else "$TVPLUS_LIVE_PREFIX${channel.id}/$asset"
+        }
 
         /** The key a channel's guide is filed under: the provider's guide id, or its channel id. */
         internal fun epgKey(channel: SolconTvPlusProtocol.LiveChannel): String =
@@ -343,7 +346,7 @@ class SolconTvPlusRepository(
                 categoryId = if (item.radio) radioCategoryId else tvCategoryId,
                 name = item.name,
                 logoUrl = item.logoUrl,
-                streamUrl = "$TVPLUS_LIVE_PREFIX${item.id}",
+                streamUrl = liveReference(item),
                 epgChannelId = epgKey(item),
                 number = item.number,
                 remoteId = item.id,

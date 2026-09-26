@@ -51,6 +51,18 @@ class SolconCatalogMappingTest {
     }
 
     @Test
+    fun `a separate stream asset rides along in the reference, anything else does not`() {
+        fun reference(assetId: String?) = channelRows(listOf(npo1.copy(assetId = assetId)), sourceId = 5, tvCategoryId = 10, radioCategoryId = 11, existingIds = emptyMap())
+            .single().streamUrl
+
+        assertEquals("solcon-tvplus://live/101/A-77", reference("A-77"))
+        assertEquals("solcon-tvplus://live/101", reference(null))
+        assertEquals("solcon-tvplus://live/101", reference("101"))
+        assertEquals("solcon-tvplus://live/101", reference("not/a plain id"))
+        assertEquals("solcon-tvplus://live/101", reference(".."))
+    }
+
+    @Test
     fun `catch-up is not offered until OwnTV can play Solcon's replay`() {
         val rows = channelRows(listOf(npo1), sourceId = 5, tvCategoryId = 10, radioCategoryId = 11, existingIds = emptyMap())
         assertFalse(rows[0].catchup)

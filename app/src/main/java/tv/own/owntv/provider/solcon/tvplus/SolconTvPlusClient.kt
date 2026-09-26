@@ -17,7 +17,7 @@ import tv.own.owntv.provider.solcon.tvplus.SolconDiagnostics.Step
 class SolconTvPlusClient(
     private val http: OkHttpClient,
     private val sessions: SolconTvPlusSessionStore,
-) {
+) : SolconTvPlusApi {
     enum class FailureReason { INVALID_CREDENTIALS, DEVICE_LIMIT, ACCOUNT_BLOCKED, REJECTED, NOT_AUTHENTICATED, NETWORK, PROTOCOL }
 
     sealed interface LoginResult {
@@ -25,12 +25,12 @@ class SolconTvPlusClient(
         data class Failure(val reason: FailureReason, val detail: FailureDetail) : LoginResult
     }
 
-    val isLoggedIn: Boolean get() = sessions.isLoggedIn()
+    override val isLoggedIn: Boolean get() = sessions.isLoggedIn()
     val deviceId: String get() = sessions.deviceId()
-    var lastDiscoveryResult: SolconDiagnostics.DiscoveryResult? = null
+    override var lastDiscoveryResult: SolconDiagnostics.DiscoveryResult? = null
         private set
 
-    suspend fun login(subscriptionNumber: String, pin: String): LoginResult = withContext(Dispatchers.IO) {
+    override suspend fun login(subscriptionNumber: String, pin: String): LoginResult = withContext(Dispatchers.IO) {
         if (subscriptionNumber.isBlank() || pin.isBlank()) {
             return@withContext LoginResult.Failure(FailureReason.INVALID_CREDENTIALS, FailureDetail(Step.SIGN_IN))
         }
@@ -92,13 +92,13 @@ class SolconTvPlusClient(
         LoginResult.Failure(FailureReason.PROTOCOL, FailureDetail(Step.SIGN_IN, lastStatus))
     }
 
-    suspend fun liveChannels(): Result<List<SolconTvPlusProtocol.LiveChannel>> = authenticatedGet { session ->
+    override suspend fun liveChannels(): Result<List<SolconTvPlusProtocol.LiveChannel>> = authenticatedGet { session ->
         SolconTvPlusProtocol.liveChannelsUrl(session.apiRoot)
     }.mapCatching { payload ->
         SolconTvPlusProtocol.parseLiveChannels(payload.requireOk().body)
     }
 
-    suspend fun epg(
+    override suspend fun epg(
         startMs: Long,
         endMs: Long,
         channelIds: Collection<String>,
@@ -108,9 +108,9 @@ class SolconTvPlusClient(
         SolconTvPlusProtocol.parseEpg(payload.requireOk().body)
     }
 
-    suspend fun resolveLivePlayback(
+    override suspend fun resolveLivePlayback(
         channelId: String,
-        assetId: String? = null,
+        assetId: String?,
     ): Result<SolconTvPlusProtocol.Playback> = authenticatedGet { session ->
         SolconTvPlusProtocol.livePlaybackUrl(
             session.apiRoot,
@@ -123,7 +123,7 @@ class SolconTvPlusClient(
         SolconTvPlusProtocol.parsePlaybackResponse(payload.requireOk().body)
     }
 
-    fun logout() = sessions.clear()
+    override fun logout() = sessions.clear()
 
     private fun rejectionReason(rejected: SolconTvPlusProtocol.LoginParse.Rejected): FailureReason =
         when (SolconTvPlusProtocol.classifyLoginRejection(rejected.code, rejected.description)) {
