@@ -857,9 +857,9 @@ class LiveViewModel(
     fun playPreview(channel: ChannelEntity) {
         if (channel.categoryId != null && channel.categoryId in hiddenCategoryIds.value) return
         solconPreviewJob?.cancel()
-        // The pane's engine, ExoPlayer, reads HTTP only: a multicast channel shows its logo and guide
-        // here and plays on mpv once opened.
-        if (tv.own.owntv.provider.solcon.SolconPlayback.isMulticast(channel.streamUrl)) {
+        // The pane's engine, ExoPlayer, reads HTTP only: a multicast channel — imported, or one TV+ has
+        // handed out as multicast — shows its logo and guide here and plays on mpv once opened.
+        if (tv.own.owntv.provider.solcon.SolconPlayback.isMulticast(channel.streamUrl) || channel.id in solconMulticastIds) {
             solconPreviewChannel = null
             // Never while promoted to full screen: that ExoPlayer stream is the one being watched.
             if (!live.liveOnExo.value) live.stopExo()
@@ -879,6 +879,9 @@ class LiveViewModel(
     private var solconPreviewChannel: ChannelEntity? = null
     private var solconPreviewJob: Job? = null
 
+    /** TV+ channels that came back as multicast: the pane cannot show them, so focusing one stops asking TV+. */
+    private val solconMulticastIds = mutableSetOf<Long>()
+
     private fun previewSolcon(channel: ChannelEntity) {
         val playing = solconPreviewChannel?.takeIf {
             it.id == channel.id && previewEngine.currentUrl != null &&
@@ -892,6 +895,11 @@ class LiveViewModel(
             // Browsing stays quiet: a channel TV+ will not hand over just shows its logo in the pane.
             val ready = solcon.prepare(channel) as? tv.own.owntv.provider.solcon.SolconPlayback.Prepared.Ready
                 ?: return@launch
+            if (tv.own.owntv.provider.solcon.SolconPlayback.isMulticast(ready.channel.streamUrl)) {
+                solconMulticastIds += channel.id
+                if (!live.liveOnExo.value) live.stopExo()
+                return@launch
+            }
             solconPreviewChannel = ready.channel
             live.preview(ready.channel, muted = !livePreviewAudio.value)
         }
