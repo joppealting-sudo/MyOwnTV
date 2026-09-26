@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Solcon TV+ in het Nederlands. Termen zoals in de rest van de app: Live-tv, Gids, Instellingen, Favorieten, Kijkgeschiedenis. -->
+    <string name="solcon_tvplus_title">Solcon TV+</string>
+    <string name="solcon_tvplus_subtitle">Je Solcon TV-abonnement als afspeellijst in OwnTV</string>
+    <string name="solcon_tvplus_chooser_subtitle">Meld je aan met je abonnementsnummer en pincode</string>
+    <string name="solcon_tvplus_settings_description">Aanmelden, en zenders en gids actueel houden</string>
+    <string name="solcon_tvplus_source_name">Solcon TV+</string>
+    <string name="solcon_tvplus_source_type">Solcon TV+</string>
+    <string name="solcon_tvplus_manage_source">Account en synchronisatie</string>
+    <string name="solcon_tvplus_tv_category">Solcon TV</string>
+    <string name="solcon_tvplus_radio_category">Radio</string>
+
+    <string name="solcon_tvplus_sign_in_title">Aanmelden</string>
+    <string name="solcon_tvplus_login_description">Gebruik het abonnementsnummer en de pincode die je ook in de officiële Solcon TV+-app gebruikt.</string>
+    <string name="solcon_tvplus_subscription_number">Abonnementsnummer</string>
+    <string name="solcon_tvplus_subscription_placeholder">Vul je abonnementsnummer in</string>
+    <string name="solcon_tvplus_pin">Pincode</string>
+    <string name="solcon_tvplus_pin_placeholder">Vul je pincode in</string>
+    <string name="solcon_tvplus_security_note">Je pincode gaat alleen naar Solcon, om deze tv aan te melden. OwnTV bewaart hem nooit.</string>
+    <string name="solcon_tvplus_sign_in">Aanmelden en synchroniseren</string>
+    <string name="solcon_tvplus_signing_in">Aanmelden bij Solcon TV+…</string>
+    <string name="solcon_tvplus_syncing">Zenders en gids ophalen…</string>
+    <string name="solcon_tvplus_busy_hint">Dit kan tot een minuut duren.</string>
+
+    <string name="solcon_tvplus_step_sign_in">Aanmelden</string>
+    <string name="solcon_tvplus_step_catalog">Zenders en gids</string>
+    <string name="solcon_tvplus_step_channels">Zenderlijst</string>
+    <string name="solcon_tvplus_step_guide">Gids</string>
+    <string name="solcon_tvplus_step_playback">Afspelen</string>
+    <string name="solcon_tvplus_http_status">HTTP %1$d</string>
+
+    <string name="solcon_tvplus_group_account">Account</string>
+    <string name="solcon_tvplus_connected">Solcon TV+ is verbonden</string>
+    <string name="solcon_tvplus_connected_chip">Verbonden</string>
+    <string name="solcon_tvplus_stat_tv">Tv-zenders</string>
+    <string name="solcon_tvplus_stat_radio">Radiozenders</string>
+    <string name="solcon_tvplus_stat_programmes">Programma\'s in de gids</string>
+    <string name="solcon_tvplus_refresh">Nu synchroniseren</string>
+    <string name="solcon_tvplus_refresh_description">Haal de nieuwste zenders en gids op. OwnTV doet dit ook vanzelf.</string>
+    <string name="solcon_tvplus_sign_out">Afmelden</string>
+    <string name="solcon_tvplus_sign_out_description">Beëindigt de Solcon-sessie op deze tv. Je zenders, favorieten en kijkgeschiedenis blijven bewaard.</string>
+
+    <string name="solcon_tvplus_status_title">Status</string>
+    <string name="solcon_tvplus_status_session">Sessie</string>
+    <string name="solcon_tvplus_status_signed_in">Aangemeld</string>
+    <string name="solcon_tvplus_status_signed_out">Afgemeld</string>
+    <string name="solcon_tvplus_status_last_sync">Laatste synchronisatie</string>
+    <string name="solcon_tvplus_status_never">Nog nooit</string>
+    <string name="solcon_tvplus_status_guide">Gids</string>
+    <string name="solcon_tvplus_status_guide_complete">Volledig</string>
+    <string name="solcon_tvplus_status_guide_partial">Gedeeltelijk geladen</string>
+    <string name="solcon_tvplus_status_server">Server</string>
+    <string name="solcon_tvplus_status_server_found">Gevonden voor je abonnement</string>
+    <string name="solcon_tvplus_status_server_standard">Standaardserver van Solcon</string>
+    <string name="solcon_tvplus_status_server_compat">Compatibiliteitsserver</string>
+    <string name="solcon_tvplus_status_playback">Laatste zender</string>
+    <string name="solcon_tvplus_status_playback_clear">Gewone stream</string>
+    <string name="solcon_tvplus_status_playback_multicast">Multicast</string>
+    <string name="solcon_tvplus_status_playback_widevine">Beveiligd (Widevine)</string>
+    <string name="solcon_tvplus_status_problem">Laatste probleem</string>
+
+    <string name="solcon_tvplus_how_title">Zo werkt het</string>
+    <string name="solcon_tvplus_how_1">Meld je aan met je abonnementsnummer en pincode.</string>
+    <string name="solcon_tvplus_how_2">OwnTV voegt je tv-zenders, radio en gids toe als afspeellijst.</string>
+    <string name="solcon_tvplus_how_3">Kijk via Live-tv en de gids. Favorieten en kijkgeschiedenis werken zoals altijd.</string>
+
+    <string name="solcon_tvplus_error_credentials">Het abonnementsnummer of de pincode is niet geaccepteerd.</string>
+    <string name="solcon_tvplus_error_device_limit">Je Solcon TV+-account heeft het maximale aantal apparaten bereikt. Meld een ander apparaat af en probeer het opnieuw.</string>
+    <string name="solcon_tvplus_error_account_blocked">Solcon heeft dit account geblokkeerd. Neem contact op met de klantenservice van Solcon.</string>
+    <string name="solcon_tvplus_error_rejected">Solcon TV+ heeft de aanmelding geweigerd. Bekijk bij Status de reden voordat je de pincode opnieuw probeert: herhaalde pogingen kunnen je account blokkeren.</string>
+    <string name="solcon_tvplus_error_network">Solcon TV+ is niet bereikbaar. Controleer de netwerkverbinding en probeer het opnieuw.</string>
+    <string name="solcon_tvplus_error_protocol">Solcon TV+ gaf een antwoord dat deze versie nog niet begrijpt.</string>
+    <string name="solcon_tvplus_error_empty_catalog">Solcon TV+ gaf geen zenders terug voor dit abonnement.</string>
+    <string name="solcon_tvplus_error_playback">Solcon TV+ kon deze zender niet starten.</string>
+    <string name="solcon_tvplus_playback_session_expired">De Solcon TV+-sessie is beëindigd. Meld je opnieuw aan via Instellingen → Solcon TV+.</string>
+    <string name="solcon_tvplus_playback_unsupported">Solcon beveiligt deze zender op een manier die OwnTV niet kan afspelen.</string>
+    <string name="solcon_tvplus_playback_protected_external">Deze zender is beveiligd en speelt daarom alleen in de ingebouwde speler.</string>
+</resources>

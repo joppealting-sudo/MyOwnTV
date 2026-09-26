@@ -143,7 +143,7 @@ class SettingsSearchCoverageTest {
         "settings_metadata_key_from_phone", "settings_metadata_remote_advanced", "settings_behavior",
         "player_subtitles_connected_user", "player_subtitles_delete_action", "player_subtitles_sign_in",
         "player_subtitles_sign_out", "settings_open_subtitles_advanced", "settings_open_subtitles_setup_local",
-        "settings_open_subtitles_setup_remote",
+        "settings_open_subtitles_setup_remote", "solcon_tvplus_refresh", "solcon_tvplus_sign_out",
     )
 
     @Test
