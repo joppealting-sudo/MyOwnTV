@@ -183,15 +183,17 @@ class SearchViewModel(
                     url = url,
                     title = movie.name,
                     userAgent = source?.userAgent,
-                    httpHeaders = movie.httpHeaders,
+                    httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(movie.httpHeaders, source),
                 )
                 return@launch
             }
             player.play(
                 url, title = movie.name, year = movie.year?.toString(), isLive = false,
                 userAgent = source?.userAgent,
-                httpHeaders = movie.httpHeaders,
+                httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(movie.httpHeaders, source),
+                vodEngineOverride = tv.own.owntv.core.settings.SourceOverrides.vodEngineOf(source),
                 drmConfig = movie.drmConfig,
+                manifestType = movie.manifestType,
                 // P6 — same stable engine-pin identity MovieViewModel uses, so a pin made in one
                 // screen applies in the other.
                 contentKey = tv.own.owntv.core.player.enginePinKey(movie.sourceId, "MOVIE", movie.remoteId),

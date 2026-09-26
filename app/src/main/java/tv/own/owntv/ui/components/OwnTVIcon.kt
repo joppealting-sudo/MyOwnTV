@@ -4,9 +4,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -34,6 +36,12 @@ enum class OwnTVIcon {
     // Where the files go. A gear said "settings for this screen"; the question this button actually
     // asks is "which folder?", and a folder is the one mark that says so without a word.
     FOLDER,
+    // Local sync: the other device in the house, and the direction data leaves in. Before these, an
+    // archive box stood for a paired phone, for "let this one be found", and for "send to it" — three
+    // meanings on one screen, and all three already meant "backup" everywhere else in the app.
+    PHONE, SEND,
+    // The sleep timer (N17): a crescent moon, the phone's mark for the same button.
+    BEDTIME,
 }
 
 @Composable
@@ -512,6 +520,24 @@ fun OwnTVIcon(
                 // instead of drawing a second line.
                 drawRoundRectStroke(p(5f, 8.5f), p(19f, 20.8f), 1.8f * s, tint, stroke)
                 drawLineStroke(p(9.8f, 12.6f), p(14.2f, 12.6f), tint, stroke)
+            }
+            OwnTVIcon.BEDTIME -> {
+                // A full disc with a smaller one bitten out of its upper right — the crescent.
+                val disc = Path().apply { addOval(Rect(p(3.5f, 3.5f), p(20.5f, 20.5f))) }
+                val bite = Path().apply { addOval(Rect(p(9.5f, 1f), p(23f, 14.5f))) }
+                drawPath(Path.combine(PathOperation.Difference, disc, bite), tint, style = stroke)
+            }
+            OwnTVIcon.SEND -> {
+                // DOWNLOADS reflected: same shaft, same baseline, arrowhead at the top. Send and
+                // Receive sit one row apart in Local sync, so they have to read as one pair.
+                drawLineStroke(p(12f, 3f), p(12f, 15f), tint, stroke)
+                drawLineStroke(p(7f, 8f), p(12f, 3f), tint, stroke)
+                drawLineStroke(p(17f, 8f), p(12f, 3f), tint, stroke)
+                drawLineStroke(p(5f, 20f), p(19f, 20f), tint, stroke)
+            }
+            OwnTVIcon.PHONE -> { // Handset: the body, and the bar along its bottom edge.
+                drawRoundRectStroke(p(7f, 2.5f), p(17f, 21.5f), 2.2f * s, tint, stroke)
+                drawLineStroke(p(11f, 18.5f), p(13f, 18.5f), tint, stroke)
             }
             OwnTVIcon.FOLDER -> { // Folder: the tab, then the body it sits on.
                 drawLineStroke(p(3.2f, 8.2f), p(3.2f, 5.8f), tint, stroke)

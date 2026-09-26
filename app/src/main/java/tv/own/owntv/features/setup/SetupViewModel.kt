@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tv.own.owntv.core.database.entity.SourceEntity
+import tv.own.owntv.core.backup.BackupManager
 import tv.own.owntv.core.setup.SourceImporter
 import tv.own.owntv.core.settings.PlaylistRefresh
 import tv.own.owntv.core.sync.SyncScopeChoice
@@ -98,8 +99,9 @@ class SetupViewModel(
         movies: SyncScopeChoice = SyncScopeChoice.Now,
         series: SyncScopeChoice = SyncScopeChoice.Now,
         preferHls: Boolean = false,
+        httpReferer: String = "",
     ) = runImport {
-        importer.xtream(name, server, username, password, userAgent, epgUrl, autoRefresh, live, movies, series, preferHls)
+        importer.xtream(name, server, username, password, userAgent, epgUrl, autoRefresh, live, movies, series, preferHls, httpReferer = httpReferer)
     }
 
     fun startStalker(
@@ -115,15 +117,16 @@ class SetupViewModel(
         live: SyncScopeChoice = SyncScopeChoice.Now,
         movies: SyncScopeChoice = SyncScopeChoice.Later,
         series: SyncScopeChoice = SyncScopeChoice.Later,
+        httpReferer: String = "",
     ) = runImport {
         importer.stalker(
             name, portalUrl, mac, serialNumber, deviceId, deviceId2, signature, userAgent,
-            autoRefresh, live, movies, series,
+            autoRefresh, live, movies, series, httpReferer = httpReferer,
         )
     }
 
-    fun startM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF) =
-        runImport { importer.m3u(name, url, userAgent, epgUrl, autoRefresh) }
+    fun startM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF, httpReferer: String = "") =
+        runImport { importer.m3u(name, url, userAgent, epgUrl, autoRefresh, httpReferer = httpReferer) }
 
     /**
      * Runs one import in the activity-scoped [viewModelScope] so "Run in background" can walk away
@@ -150,15 +153,33 @@ class SetupViewModel(
     /** Link the chosen existing sources to the new profile, then re-sync each one. */
     fun linkExisting(sourceIds: Set<Long>) = runImport { importer.linkExisting(sourceIds) }
 
-    /** Restore everything from a backup file (merges profiles & sources, then activates one). Encrypted
-     *  backups first ask for the backup password via [SourceImporter.ImportState.NeedPassword]. */
-    fun importBackup(file: File, onDone: (Long?) -> Unit) {
-        viewModelScope.launch { if (importer.importBackup(file)) onRestored(onDone) }
+    /**
+     * Restore a backup file (merges profiles & sources, then activates one). Encrypted backups first
+     * ask for the backup password via [SourceImporter.ImportState.NeedPassword].
+     *
+     * [sections] is what the user ticked before the restore began, and defaults to all of it — which
+     * is what the wizard did unconditionally until it gained a picker of its own. Settings → Backup
+     * & Restore has always asked; the first run, where a restore is most likely, did not.
+     */
+    fun importBackup(
+        file: File,
+        onDone: (Long?) -> Unit,
+        sections: Set<BackupManager.Section> = BackupManager.Section.entries.toSet(),
+        /** Take another device's hardware settings too — see [BackupManager.import]. */
+        deviceSettings: Boolean = false,
+    ) {
+        viewModelScope.launch { if (importer.importBackup(file, sections, deviceSettings)) onRestored(onDone) }
     }
 
     /** Continue an encrypted restore once the user provides (or skips, password = null) the passphrase. */
-    fun restoreWithPassword(file: File, password: String?, onDone: (Long?) -> Unit) {
-        viewModelScope.launch { if (importer.restoreWithPassword(file, password)) onRestored(onDone) }
+    fun restoreWithPassword(
+        file: File,
+        password: String?,
+        onDone: (Long?) -> Unit,
+        sections: Set<BackupManager.Section> = BackupManager.Section.entries.toSet(),
+        deviceSettings: Boolean = false,
+    ) {
+        viewModelScope.launch { if (importer.restoreWithPassword(file, password, sections, deviceSettings)) onRestored(onDone) }
     }
 
     // A backup may restore several profiles or a PIN-locked active profile. Restoring data is not

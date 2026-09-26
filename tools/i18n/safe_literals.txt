@@ -59,10 +59,20 @@
 1	empty	app/src/main/java/tv/own/owntv/features/downloads/DownloadsViewModel.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	ALL
 1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	EEEdMMM
-4	empty	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	\0
-2	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	$key|$shift
+1	empty	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	${channel.id}|$shift
 1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	EpgViewModel
 1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	Stalker catch-up resolve failed channelId=${channel.id}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	cache-reused
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	first-load
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	guide_load channels=${channels.size} rawChannels=${rawChannels.size}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	lookbackH=${lookbackMs / 3_600_000}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	rebuilt=$windowChanged reason=$rebuildReason cachedRows=${cachedRowCount()}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	sources-changed
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	stored-count-changed
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	stored=$stored guideChannels=$guideChannels sources=${ids.size}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	totalMs=${android.os.SystemClock.elapsedRealtime() - loadStartedAt}
+1	log	app/src/main/java/tv/own/owntv/features/epg/EpgViewModel.kt	window-moved
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideCore.kt	↻
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	#${activeIndex + 1}
 2	locale	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	EN
@@ -106,43 +116,17 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	remove_history
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	rename
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	−
-3	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+5	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
-1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	$label — $reason
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	$reason — gave up after ${ladderBudgetMs.value / 1000}s
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	${if (onMpv) "mpv" else "exoplayer"} (pinned)
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	${if (onMpv) "mpv" else "exoplayer"} (setting)
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}' falling back to $label ($reason)
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}' opened on mpv
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}' — giving up: $detail
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}' — no fallback left ($detail)
-2	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}': $detail
-1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ExoPlayer
-1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LIVE
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	'${channel.name}' — Solcon TV+ could not prepare it (${prepared.category.name})
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	engine toggle '${channel.name}' -> ${if (goToMpv) "mpv" else "exoplayer"} (currentlyOnExo=${_liveOnExo.value})
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	engine: $message
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
-3	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	exoplayer
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	exoplayer (drm)
-4	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	mpv
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	mpv (panel refuses segments)
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	mpv couldn't play it: ${failure.second}
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	mpv never opened it (${MPV_OPEN_TIMEOUT_MS / 1000}s, no picture and no error)
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	multiview resolve failed '${channel.name}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	no picture within ${ladderBudgetMs.value / 1000}s of tuning
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker fullscreen resolve failed '${channel.name}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker mpv resolve failed '${channel.name}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker preview resolve failed '${channel.name}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker reconnect re-resolve failed '${channel.name}'
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tune '${channel.name}' -> $reason [${preference.name}]
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	user chose compatibility mode
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	LiveZapList
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	direct tune: zap rebuild failed
 1	empty	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	\0
@@ -182,6 +166,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	remove_history
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	set_tmdb_name
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	tmdb_details
+1	url	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	w1280
 1	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	✓
 4	empty	app/src/main/java/tv/own/owntv/features/profiles/ProfileComponents.kt	\0
 1	locale	app/src/main/java/tv/own/owntv/features/recordings/RecordingsScreen.kt	EEEdMMMjm
@@ -212,6 +197,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	series
 1	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	set_tmdb_name
 2	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	tmdb_details
+1	url	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	w1280
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	w300
 2	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	✓
 2	empty	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	\0
@@ -219,6 +205,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	${StorageAccess.sanitize(episode.name.ifBlank { "episode-${episode.episodeNumber}" })}.$ext
 3	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	EPISODE
 1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	OwnTVHome
+1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	SERIES
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	Series
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	episode-${ep.episodeNumber}
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	episode-${episode.episodeNumber}
@@ -259,6 +246,8 @@
 1	empty	app/src/main/java/tv/own/owntv/features/settings/LanguageSettingsScreen.kt	\0
 3	empty	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	\0
 1	url	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	http://
+1	technical	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	localSyncBusy
+1	technical	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	localSyncBusyAngle
 1	technical	app/src/main/java/tv/own/owntv/features/settings/ManageProfilesScreen.kt	•
 5	empty	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	\0
 5	empty	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	\0
@@ -352,73 +341,64 @@
 1	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	user-info refresh failed: ${it.message}
 1	technical	app/src/main/java/tv/own/owntv/features/settings/PanelWidthSettingsScreen.kt	+
 1	technical	app/src/main/java/tv/own/owntv/features/settings/PanelWidthSettingsScreen.kt	–
-28	empty	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	\0
-1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	/
+32	empty	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	FIT
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	Metadata cache wipe after language change failed: ${it.message}
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	Network is unreachable
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	OwnTVHome
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	Proxy-Authorization
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	SettingsViewModel
-1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	add_remainder
-1	url	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	content://
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	delete sourceId=${source.id}
-1	url	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	file://
-1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	fresh_add
 1	url	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	https://www.gstatic.com/generate_204
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	manual_clean_resync
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	manual_resync
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	refreshActiveTvHome profile=$pid allowBrowsable=$allowBrowsableRequest
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	resync cancel sourceId=${source.id}
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	resync enqueue sourceId=${source.id} clean=$clean
-1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	runImport profile=$pid autoRefresh=$autoRefresh
-1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	runImport sync success sourceId=${source.id} profile=$pid
+1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	runImport profile=$pid
+1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	runImport sync success sourceId=${done.source?.id} profile=$pid
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	scope_edit
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	setAndroidTvHomeEnabled enabled=$enabled
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	timed out
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	unknown host
-12	empty	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SolconTvPlusAccountScreen.kt	MMMd
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SolconTvPlusAccountScreen.kt	✓
+16	empty	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	$exo · $mpv
-3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	${src.name} · $value
+5	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	${src.name} · $value
 1	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	+
 1	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	-1
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	ara
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	deu
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	eng
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	fra
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	hin
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	ita
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	jpn
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	kor
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	nld
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	por
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	rus
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	spa
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	tur
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_afr
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_afr_pause
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_afr_resolution
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_audio_lang
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_audio_sync
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_autoplay
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_channel_numbers
-3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_deinterlace
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_external
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_forget_fixes
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_hdr
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_hw
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_latency_sources
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_live_engine
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_live_engine_sources
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_live_latency
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_live_left_right
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_live_preview
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_logging
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_max_quality
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_measured_stats
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_mini
 3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_multiview
 4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_multiview_tiles
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_night_mode
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_passthrough
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_preroll
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_preroll_sources
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_preview_audio
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_reset_audio_delay
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_reset_live_pins
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_reset_pins
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_reset_volume
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_reset_zoom
@@ -428,19 +408,25 @@
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_sub_lang
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_sub_style
 3	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_surround
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_timeshift
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_timeshift_window
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_tune_timeout
+4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_tune_timeout_sources
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_tunneled
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_vod_buffer
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_vod_engine
+4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_vod_engine_sources
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_vod_reconnects
+4	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_vod_timeout
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_volume
+3	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_volume_leveling
 4	preference-key	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	vp_zoom
-2	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	zho
 1	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	–
-13	empty	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	\0
-1	technical	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	+
+14	empty	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	\0
 2	file-path	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	/
 1	technical	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	m3u
 1	technical	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	m3u8
-1	technical	app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt	−
-9	empty	app/src/main/java/tv/own/owntv/features/setup/SetupViewModel.kt	\0
+12	empty	app/src/main/java/tv/own/owntv/features/setup/SetupViewModel.kt	\0
 1	empty	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	\0
 5	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	\0
 2	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	Action
@@ -485,30 +471,44 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/AvatarPickerDialog.kt	\0
 2	empty	app/src/main/java/tv/own/owntv/features/shell/components/CategoryRail.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CategoryRail.kt	__rail_search__
+1	empty	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	1080p
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	4K
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	720p
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	8K
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	SD
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	cinematic-backdrop
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/CinematicBrowse.kt	•
 1	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	·
-8	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
+10	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
 5	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#%06X
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#F5B400
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#FFFFFF
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	$CATCHUP_MANUAL_PREFIX$it
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	$CATCHUP_MANUAL_PREFIX${src?.catchupOffsetMin ?: 0}
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	$group $title $keywords
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	${src.name} · ${catchupOverrideLabel(src)}
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	${stringResource(R.string.settings_glass_depth_title)}: ${stringResource(if (depthEffects) R.string.common_on else R.string.common_off)}
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	${stringResource(R.string.settings_glass_full_transparency_title)}: ${stringResource(if (allowFullTransparency) R.string.common_on else R.string.common_off)}
 3	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	+
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	-
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	52DBC8
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	F5B400
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	MANUAL:
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	UTC
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	UTC$sign%02d:%02d
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	accent
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	ambient_glow
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	animations
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	app_icon
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	app_startup
 4	file-path	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	backgrounds
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	bmp
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	browsing_lists
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	catchup
+1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	catchup_sources
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	check_updates
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	dMMM
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	epg_offset
@@ -526,6 +526,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	group_profile
 5	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	group_quick
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	group_sources
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	guide_days
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	jpeg
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	jpg
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	mpv
@@ -546,7 +547,9 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	ui_zoom
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	update_startup
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	v${tv.own.owntv.BuildConfig.VERSION_NAME}
+1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vod_layout
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_afr
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_audio_lang
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_autoplay
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_channel_numbers
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_hdr
@@ -556,7 +559,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_mini
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_preroll
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_preview_audio
-1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_sub_style
+2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_sub_style
 1	preference-key	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	vp_surround
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	webp
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	–
@@ -610,12 +613,11 @@
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR reset failed: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: ${fps}fps -> mode ${target.modeId} deferred ${waitMs}ms (cooldown)
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: display mode released
-1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: video ${fps}fps -> display mode ${target.modeId} (${target.refreshRate}Hz)
+1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: video ${fps}fps -> display mode ${target.modeId} (${target.physicalWidth}x${target.physicalHeight} ${target.refreshRate}Hz, seamless=${choice.seamless})
 1	compiler	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	DEPRECATION
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	FrameRate
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	miniControls
-1	compiler	app/src/main/java/tv/own/owntv/player/MpvVideoSurface.kt	DEPRECATION
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
 9	empty	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v
@@ -633,8 +635,241 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	toolPadding
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	rec
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	recPulse
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/SolconPlayback.kt	$trimmed$separator$OVERRUN_OPTION=1
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconPlayback.kt	overrun_nonfatal
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/SolconPlayback.kt	udp://
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	$scheme://$host:$port
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	^solcon-tvplus://live/([0-9]+)(?:/([A-Za-z0-9][A-Za-z0-9._-]{0,63}))?$
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	rtp
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/SolconStreamPolicy.kt	udp
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/WifiMulticastLock.kt	SolconMulticast
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/WifiMulticastLock.kt	multicast lock not taken
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/WifiMulticastLock.kt	owntv-iptv-multicast
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconAutoRefresh.kt	SolconAutoRefresh
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconAutoRefresh.kt	background refresh failed: ${it.javaClass.simpleName}
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	FailureDetail(step=$step, httpStatus=$httpStatus, providerCode=$providerCode)
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	^[A-Za-z0-9_.:-]{1,48}$
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	epg_complete
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_discovery
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_error
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_failure_code
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_failure_http
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_failure_step
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_playback_route
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	last_sync_at_ms
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	programmes
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	radio_channels
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	session_authenticated
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	solcon_tvplus_diagnostics
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconDiagnostics.kt	tv_channels
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	;
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Accept
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Authorization
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Bearer $it
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Cookie
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	HTTP $status
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	MyOwnTV Android TV
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Set-Cookie
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	Solcon TV+ session is not authenticated
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	User-Agent
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	api-avs67.tv.prod.itvavs.prod.aws.kpn.com
+1	mime	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	application/json
+1	mime	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	application/json; charset=utf-8
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	client-id
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusClient.kt	tenant-id
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	$DISCOVERY_URL&tan=$tan
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	000002
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	^[A-Za-z0-9_-]+$
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	^[a-z0-9.-]+$
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	androidtv
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	endpoint
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	host
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	http://
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	https://
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	https://$rawEndpoint
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	https://${endpoint.host}/${endpoint.tenant}/1.5/A/nld/$platform/kpn
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	pctv
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	tenant
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	tenantId
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusDiscovery.kt	url
+3	empty	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	$channelId:$start
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	${normalizeRoot(root)}/${path.trimStart('/')}
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	%20
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	&filter_channelIds=${encode(ids)}
+2	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	***
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	+
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	,
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/101/
+2	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/kpn
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	/nld
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	0
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	ANDROIDTV
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Android
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Android TV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	BAD
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	BLOCKED
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	CONTENT/VIDEOURL/LIVE/${encodePath(channelId)}/${encodePath(contentId)}/?deviceId=${encode(deviceId)}&profile=G02&time=$nowMs
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	CREDENTIAL
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	CREDENTIALS
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Clear(url=**redacted**, headers=${streamHeaders.keys})
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	DEVICE
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	DEVICEID
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	DEVICES
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	DISABLED
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	EXCEEDED
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	INCORRECT
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	INVALID
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Invalid login response
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Invalid playback response
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	LIMIT
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	LOCKED
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	LOGIN
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Login succeeded without usable session material
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	MAX
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	MAXIMUM
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	MyOwnTV
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	No playback URL returned
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	OK
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	PASSWORD
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	PCTV
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	PIN
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Playback rejected
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Provider returned protected playback without a standard Widevine license URL
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	SUCCESS
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	SUSPENDED
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Session(token=${if (token.isNullOrBlank()) "none" else "***"}, cookie=${if (cookie.isNullOrBlank()) "none" else "***"}, deviceSession=${deviceSession?.let { "set" } ?: "none"}, accountId=${accountId?.let { "set" } ?: "none"})
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	TRAY/EPG?filter_startTime=$startMs&filter_endTime=$endMs&from=0&to=9999
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	TRAY/LIVECHANNELS?orderBy=orderId&sortOrder=asc&from=0&to=999&dfilter_channels=subscription
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	USER/SESSIONS/
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	WRONG
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Widevine(url=**redacted**, licenseUrl=**redacted**, streamHeaders=${streamHeaders.keys}, licenseHeaders=${licenseHeaders.keys})
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	Y
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	[^A-Z0-9]+
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accessToken
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accountDeviceIdType
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	accountId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	airingEndTime
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	airingStartTime
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	api-avs
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	appVersion
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	archiveDays
+3	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	assetId
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	catchupDays
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channel
+4	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelName
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	channelNumber
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	clientId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	contentId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	contentType
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	cookie
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	credentialsStdAuth
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	customerId
+3	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	description
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	device
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceFirmVersion
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceId
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceIdType
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceInfo
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceRegistrationData
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceSession
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceSessionId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	deviceType
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	devicesession
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmLicenseUrl
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmSystem
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	drmType
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	end
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	endTime
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	epgChannelId
+3	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	error
+3	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	errorCode
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	errorDescription
+6	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	externalChannelId
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://api-avs67.tv.prod.itvavs.prod.aws.kpn.com/101/1.2.0/A/nld/pctv/kpn
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://api-avs67.tv.prod.itvavs.prod.aws.kpn.com/101/1.5/A/nld/kpn
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	https://ausar.tcloud-itv-prd1.prod.aws.kpn.com/public/v1/ear?type=ott
+4	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	id
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	imageUrl
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	lcn
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	licenseUrl
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	logoUrl
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	longDescription
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	manifestUrl
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	mediaType
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	message
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	metadata
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	model
+4	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	name
+4	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	none
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	number
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	orderId
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	password
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	pictureUrl
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	playUrl
+3	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	programId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	programTitle
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	protectionType
+2	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	radio
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	remember
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	replayDays
+4	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	resultCode
+5	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	resultObj
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	sessionCookie
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	sessionToken
+2	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	set
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	shortDescription
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	start
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	startTime
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	stop
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	streamingUrl
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	tenantId
+4	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	title
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	token
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	type
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	url
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	username
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	value
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	vendor
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	videoUrl
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevine
+1	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	widevineLicenseUrl
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusProtocol.kt	xmltvId
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${channel.id}
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	$TVPLUS_LIVE_PREFIX${channel.id}/$asset
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Invalid Solcon TV+ channel reference
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	No profile to add Solcon TV+ to
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ playback request failed
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	Solcon TV+ returned no subscribed channels
+1	regex	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	[A-Za-z0-9][A-Za-z0-9._-]{0,63}
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-radio
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tv
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tvplus://account
+1	url	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusRepository.kt	solcon-tvplus://live/
+2	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	***
+1	technical	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	.
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	AES/GCM/NoPadding
+1	protocol	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	AndroidKeyStore
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	Invalid encrypted session
+1	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	StoredSession(apiRoot=$apiRoot, token=${if (token.isNullOrBlank()) "none" else "***"}, cookie=${if (cookie.isNullOrBlank()) "none" else "***"}, authenticated=true)
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	accountId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	apiRoot
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	clientId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	cookie
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	deviceSession
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	device_id
+2	log	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	none
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	owntv.solcon.tvplus.session.v1
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	session
+1	preference-key	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	solcon_tvplus_session_v1
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	tenantId
+2	json	app/src/main/java/tv/own/owntv/provider/solcon/tvplus/SolconTvPlusSessionStore.kt	token
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	background_${System.currentTimeMillis()}.$ext
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	png
+1	log	app/src/main/java/tv/own/owntv/ui/components/DayStepperDialog.kt	+
+1	log	app/src/main/java/tv/own/owntv/ui/components/DayStepperDialog.kt	−
 1	performance	app/src/main/java/tv/own/owntv/ui/components/FocusableSurface.kt	focusContainer
 1	performance	app/src/main/java/tv/own/owntv/ui/components/FocusableSurface.kt	focusScale
 1	protocol	app/src/main/java/tv/own/owntv/ui/components/GenreColor.kt	+18

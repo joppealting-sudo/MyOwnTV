@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Solcon TV+ — this fork's own strings (upstream's live in core). Dutch in values-nl. -->
+    <string name="solcon_tvplus_title">Solcon TV+</string>
+    <string name="solcon_tvplus_subtitle">Your Solcon TV subscription, as a playlist in OwnTV</string>
+    <string name="solcon_tvplus_chooser_subtitle">Sign in with your subscription number and PIN</string>
+    <string name="solcon_tvplus_settings_description">Sign in, and keep channels and the guide up to date</string>
+    <string name="solcon_tvplus_source_name">Solcon TV+</string>
+    <string name="solcon_tvplus_source_type">Solcon TV+</string>
+    <string name="solcon_tvplus_manage_source">Account and sync</string>
+    <string name="solcon_tvplus_tv_category">Solcon TV</string>
+    <string name="solcon_tvplus_radio_category">Radio</string>
+
+    <!-- Sign in -->
+    <string name="solcon_tvplus_sign_in_title">Sign in</string>
+    <string name="solcon_tvplus_login_description">Use the subscription number and PIN you use in the official Solcon TV+ app.</string>
+    <string name="solcon_tvplus_subscription_number">Subscription number</string>
+    <string name="solcon_tvplus_subscription_placeholder">Enter your subscription number</string>
+    <string name="solcon_tvplus_pin">PIN</string>
+    <string name="solcon_tvplus_pin_placeholder">Enter your PIN</string>
+    <string name="solcon_tvplus_security_note">Your PIN only goes to Solcon, to sign this TV in. OwnTV never stores it.</string>
+    <string name="solcon_tvplus_sign_in">Sign in and sync</string>
+    <string name="solcon_tvplus_signing_in">Signing in to Solcon TV+…</string>
+    <string name="solcon_tvplus_syncing">Fetching channels and the guide…</string>
+    <string name="solcon_tvplus_busy_hint">This can take up to a minute.</string>
+
+    <!-- The steps a sign-in goes through; also how the last problem names where it happened -->
+    <string name="solcon_tvplus_step_sign_in">Sign-in</string>
+    <string name="solcon_tvplus_step_catalog">Channels and guide</string>
+    <string name="solcon_tvplus_step_channels">Channel list</string>
+    <string name="solcon_tvplus_step_guide">Guide</string>
+    <string name="solcon_tvplus_step_playback">Playback</string>
+    <string name="solcon_tvplus_http_status">HTTP %1$d</string>
+    <string name="solcon_tvplus_detail_separator" translatable="false">" · "</string>
+
+    <!-- Signed in -->
+    <string name="solcon_tvplus_group_account">Account</string>
+    <string name="solcon_tvplus_connected">Solcon TV+ is connected</string>
+    <string name="solcon_tvplus_connected_chip">Connected</string>
+    <string name="solcon_tvplus_stat_tv">TV channels</string>
+    <string name="solcon_tvplus_stat_radio">Radio stations</string>
+    <string name="solcon_tvplus_stat_programmes">Guide entries</string>
+    <string name="solcon_tvplus_refresh">Sync now</string>
+    <string name="solcon_tvplus_refresh_description">Fetch the latest channels and guide. OwnTV also does this by itself.</string>
+    <string name="solcon_tvplus_sign_out">Sign out</string>
+    <string name="solcon_tvplus_sign_out_description">Ends the Solcon session on this TV. Your channels, favorites and history stay.</string>
+
+    <!-- Status -->
+    <string name="solcon_tvplus_status_title">Status</string>
+    <string name="solcon_tvplus_status_session">Session</string>
+    <string name="solcon_tvplus_status_signed_in">Signed in</string>
+    <string name="solcon_tvplus_status_signed_out">Signed out</string>
+    <string name="solcon_tvplus_status_last_sync">Last sync</string>
+    <string name="solcon_tvplus_status_never">Never</string>
+    <string name="solcon_tvplus_status_guide">Guide</string>
+    <string name="solcon_tvplus_status_guide_complete">Complete</string>
+    <string name="solcon_tvplus_status_guide_partial">Partly loaded</string>
+    <string name="solcon_tvplus_status_server">Server</string>
+    <string name="solcon_tvplus_status_server_found">Found for your subscription</string>
+    <string name="solcon_tvplus_status_server_standard">Solcon\'s standard server</string>
+    <string name="solcon_tvplus_status_server_compat">Compatibility server</string>
+    <string name="solcon_tvplus_status_network">Network</string>
+    <string name="solcon_tvplus_status_network_wired">Wired (Ethernet)</string>
+    <string name="solcon_tvplus_status_network_wifi">Wi-Fi</string>
+    <string name="solcon_tvplus_status_network_other">Other connection</string>
+    <string name="solcon_tvplus_status_network_none">Not connected</string>
+    <string name="solcon_tvplus_status_playback">Last channel</string>
+    <string name="solcon_tvplus_status_playback_clear">Standard stream</string>
+    <string name="solcon_tvplus_status_playback_multicast">Multicast</string>
+    <string name="solcon_tvplus_status_playback_widevine">Protected (Widevine)</string>
+    <string name="solcon_tvplus_status_problem">Last problem</string>
+
+    <!-- Before the first sync -->
+    <string name="solcon_tvplus_how_title">How it works</string>
+    <string name="solcon_tvplus_how_1">Sign in with your subscription number and PIN.</string>
+    <string name="solcon_tvplus_how_2">OwnTV adds your TV channels, radio and guide as a playlist.</string>
+    <string name="solcon_tvplus_how_3">Watch them in Live TV and the Guide. Favorites and history work as usual.</string>
+
+    <!-- What went wrong -->
+    <string name="solcon_tvplus_error_credentials">The subscription number or PIN was not accepted.</string>
+    <string name="solcon_tvplus_error_device_limit">Your Solcon TV+ account has reached its device limit. Sign out another device, then try again.</string>
+    <string name="solcon_tvplus_error_account_blocked">Solcon has blocked this account. Contact Solcon customer service.</string>
+    <string name="solcon_tvplus_error_rejected">Solcon TV+ refused the sign-in. Check the status for its reason before trying the PIN again, because repeated attempts can lock the account.</string>
+    <string name="solcon_tvplus_error_network">Could not reach Solcon TV+. Check the network connection and try again.</string>
+    <string name="solcon_tvplus_error_protocol">Solcon TV+ answered in a way this version does not understand yet.</string>
+    <string name="solcon_tvplus_error_empty_catalog">Solcon TV+ returned no channels for this subscription.</string>
+    <string name="solcon_tvplus_error_playback">Solcon TV+ could not start this channel.</string>
+    <string name="solcon_tvplus_playback_session_expired">The Solcon TV+ session has ended. Sign in again under Settings → Solcon TV+.</string>
+    <string name="solcon_tvplus_playback_unsupported">Solcon protects this channel in a way OwnTV cannot play.</string>
+    <string name="solcon_tvplus_playback_protected_external">This channel is protected, so it plays in the built-in player only.</string>
+</resources>

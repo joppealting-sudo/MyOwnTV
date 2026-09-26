@@ -371,6 +371,8 @@ dependencies {
     // Lifecycle / Navigation
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // ProcessLifecycleOwner: the Wi-Fi multicast lock is let go when OwnTV leaves the screen.
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.navigation.compose)
 
     // Preferences
@@ -405,8 +407,9 @@ dependencies {
     implementation(libs.zxing.core) // QR generation for the Remote (companion) add-source flow
     implementation(libs.juniversalchardet) // local subtitle charset detection (subtitle plan §7.2)
 
-    // Media playback — libmpv (FFmpeg) engine
-    implementation(libs.libmpv)
+    // Media playback — libmpv (FFmpeg) is NOT declared here. `:player-core` exposes it as `api`, so it
+    // arrives with core, on core's version. Two hosts each naming their own copy is exactly the
+    // duplicate-class / duplicate-.so conflict the swap to OwnTV's own libmpv build ran into.
     // Media3 / ExoPlayer — used ONLY for the VOD + image-subtitle (PGS/VOBSUB/DVB) handoff, where it
     // keeps video zero-copy AND renders bitmap subs on its own layer (mpv's direct path can't). Not a
     // sidecar: mpv is stopped first, so the provider only ever sees one connection.

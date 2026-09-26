@@ -19,6 +19,7 @@ import tv.own.owntv.core.repository.SourceRepository
 import tv.own.owntv.core.sync.work.EpgSyncScheduler
 import tv.own.owntv.core.sync.work.EpgSyncState
 import tv.own.owntv.core.settings.EpgAutoRefresh
+import tv.own.owntv.core.settings.EpgRefresh
 import tv.own.owntv.core.settings.SettingsRepository
 
 /** Manage standalone EPG (XMLTV) sources: list, add (auto-sync), edit, re-sync, delete. */
@@ -39,11 +40,11 @@ class EpgSourcesViewModel(
         store.sources.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Per-source EPG auto-refresh selection (Off / Startup / staleness threshold). */
-    val autoRefresh: StateFlow<Map<Long, EpgAutoRefresh>> = settings.epgAutoRefresh
+    val autoRefresh: StateFlow<Map<Long, EpgRefresh>> = settings.epgAutoRefresh
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    fun setAutoRefresh(source: EpgSource, mode: EpgAutoRefresh) {
-        viewModelScope.launch { settings.setEpgAutoRefresh(source.id, mode) }
+    fun setAutoRefresh(source: EpgSource, refresh: EpgRefresh) {
+        viewModelScope.launch { settings.setEpgAutoRefresh(source.id, refresh) }
     }
 
     /** EPG sources whose own `<icon src>` logos replace the playlist's channel logos. */
@@ -54,7 +55,7 @@ class EpgSourcesViewModel(
         viewModelScope.launch { settings.setEpgUseLogos(source.id, enabled) }
     }
 
-    fun add(name: String, url: String, userAgent: String? = null, autoRefresh: EpgAutoRefresh = EpgAutoRefresh.OFF, useLogos: Boolean = false) {
+    fun add(name: String, url: String, userAgent: String? = null, autoRefresh: EpgRefresh = EpgRefresh.OFF, useLogos: Boolean = false) {
         viewModelScope.launch {
             val source = store.add(name, url, userAgent)
             settings.setEpgAutoRefresh(source.id, autoRefresh)

@@ -35,6 +35,7 @@ import tv.own.owntv.core.sync.work.CatalogSyncScheduler
 import tv.own.owntv.core.sync.work.EpgSyncScheduler
 import tv.own.owntv.core.database.dao.EpgDao
 import tv.own.owntv.core.settings.EpgAutoRefresh
+import tv.own.owntv.core.settings.EpgRefresh
 import tv.own.owntv.core.settings.PlaylistAutoRefresh
 import tv.own.owntv.core.settings.PlaylistRefresh
 import tv.own.owntv.core.settings.SettingsRepository
@@ -78,15 +79,7 @@ class ShellViewModel(
     init {
         // One-time: move any existing playlist EPG into the new standalone EPG sources (v2.2.0).
         viewModelScope.launch { runCatching { epgMigration.run() } }
-        // One-time: migrate the legacy binary refresh-on-startup set → per-source STARTUP entries.
-        viewModelScope.launch { runCatching { settings.migrateLegacyRefreshFlags() } }
-        // v4.1.6: one-time safety reset. Later user changes to AFR are never overwritten.
-        viewModelScope.launch { runCatching { settings.migrateAutoFrameRate416() } }
-        // v4.2.0: one-time safety reset for devices below Android 12, where the app cannot tell a
-        // seamless refresh-rate switch from one that blanks the panel. Later user changes are kept.
-        viewModelScope.launch { runCatching { settings.migrateAutoFrameRatePre12() } }
-        // v4.1.6: reset live latency to Balanced once; later user choices remain untouched.
-        viewModelScope.launch { runCatching { settings.migrateLiveLatency416() } }
+        // The one-shot settings migrations run from core at process start (PlaybackStartup).
         viewModelScope.launch {
             settings.activeProfileId
                 .distinctUntilChanged()
@@ -152,7 +145,7 @@ class ShellViewModel(
             if (epgModes.isNotEmpty()) {
                 val epgSources = epgSourceStore.getAll()
                 epgSources.forEach { src ->
-                    val mode = epgModes[src.id] ?: EpgAutoRefresh.OFF
+                    val mode = epgModes[src.id] ?: EpgRefresh.OFF
                     if (shouldRefreshEpg(mode, src.lastSyncAt, nowMs, includeStartup)) {
                         val base = epgDao.countForSources(listOf(src.id))
                         Log.d(TAG, "checkAutoRefresh epg sourceId=${src.id} mode=$mode — enqueuing")
@@ -223,14 +216,16 @@ class ShellViewModel(
 
     /** EPG equivalent of [shouldRefresh]. */
     private fun shouldRefreshEpg(
-        mode: EpgAutoRefresh,
+        refresh: EpgRefresh,
         lastSyncAt: Long?,
         now: Long,
         includeStartup: Boolean,
-    ): Boolean = when (mode) {
+    ): Boolean = when (refresh.mode) {
         EpgAutoRefresh.OFF -> false
         EpgAutoRefresh.STARTUP -> includeStartup
-        else -> (now - (lastSyncAt ?: 0L)) >= (mode.thresholdMs ?: Long.MAX_VALUE)
+        // MANUAL's threshold is its day count; every other mode carries its own. Identical shape to
+        // [shouldRefresh], which is the point of the parity.
+        else -> (now - (lastSyncAt ?: 0L)) >= (refresh.thresholdMs ?: Long.MAX_VALUE)
     }
 
     val themeMode: StateFlow<ThemeMode> = settings.themeMode

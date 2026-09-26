@@ -638,8 +638,11 @@ fun EpgScreen(
     }
 
     if (review.isNotEmpty()) {
+        val includeLogos by vm.includeGuideLogos.collectAsStateWithLifecycle()
         EpgMatchReviewDialog(
             suggestions = review,
+            includeLogos = includeLogos,
+            onIncludeLogos = vm::setIncludeGuideLogos,
             onAccept = vm::acceptSuggestion,
             onSkip = vm::dismissSuggestion,
             onAcceptAll = vm::acceptAllSuggestions,
@@ -671,6 +674,8 @@ fun EpgScreen(
 @Composable
 private fun EpgMatchReviewDialog(
     suggestions: List<EpgViewModel.EpgMatchSuggestion>,
+    includeLogos: Boolean,
+    onIncludeLogos: (Boolean) -> Unit,
     onAccept: (EpgViewModel.EpgMatchSuggestion) -> Unit,
     onSkip: (EpgViewModel.EpgMatchSuggestion) -> Unit,
     onAcceptAll: () -> Unit,
@@ -687,7 +692,7 @@ private fun EpgMatchReviewDialog(
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDone) {
     tv.own.owntv.ui.theme.PopupFontTheme(fontScale = 0.75f) {
     Box(
-        Modifier.fillMaxSize().modalScrim(),
+        Modifier.fillMaxSize().modalScrim().trapAllFocusExit().focusGroup(),
         contentAlignment = Alignment.Center,
     ) {
         Column(Modifier.dialogPanel(width = 576.dp, corner = 18.dp, padding = 18.dp)) {
@@ -744,6 +749,39 @@ private fun EpgMatchReviewDialog(
                     OwnTVButton(stringResource(R.string.content_epg_skip_all), onClick = onSkipAll, style = OwnTVButtonStyle.SECONDARY, modifier = Modifier.fillMaxWidth())
                 }
                 OwnTVButton(stringResource(R.string.common_done), onClick = onDone, style = OwnTVButtonStyle.SECONDARY, modifier = Modifier.fillMaxWidth())
+                // A tick box and one short word, so it fits this narrow column in every language.
+                FocusableSurface(
+                    onClick = { onIncludeLogos(!includeLogos) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    unfocusedContainerColor = colors.surfaceContainerHigh,
+                    contentAlignment = Alignment.CenterStart,
+                    surface = GlassSurface.DIALOGS,
+                ) { _ ->
+                    Row(
+                        Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val boxColor = colors.primary
+                        val tickColor = colors.onPrimary
+                        androidx.compose.foundation.Canvas(Modifier.size(18.dp)) {
+                            val corner = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+                            if (includeLogos) {
+                                drawRoundRect(boxColor, cornerRadius = corner)
+                                val tick = androidx.compose.ui.graphics.Path().apply {
+                                    moveTo(size.width * 0.22f, size.height * 0.52f)
+                                    lineTo(size.width * 0.42f, size.height * 0.72f)
+                                    lineTo(size.width * 0.78f, size.height * 0.30f)
+                                }
+                                drawPath(tick, tickColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                            } else {
+                                drawRoundRect(boxColor, cornerRadius = corner, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                            }
+                        }
+                        Text(stringResource(R.string.content_epg_include_logos_short), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+                    }
+                }
             }
             }
         }
@@ -771,6 +809,7 @@ private fun EpgMatchChooserDialog(
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { firstFocus.requestFocus() } }
 
+    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss) {
     Box(
         Modifier.fillMaxSize().modalScrim().trapAllFocusExit().focusGroup()
             .longPressMenuGuard(), // long-press OK is still held — don't auto-click the first option
@@ -799,6 +838,7 @@ private fun EpgMatchChooserDialog(
             Spacer(Modifier.height(16.dp))
             OwnTVButton(stringResource(R.string.common_cancel), onClick = onDismiss, style = OwnTVButtonStyle.SECONDARY)
         }
+    }
     }
 }
 
@@ -830,9 +870,10 @@ private fun GuideChannelRow(
     channelWidth: androidx.compose.ui.unit.Dp,
 ) {
     val colors = OwnTVTheme.colors
-    // Cache peek as the initial value → rows render instantly from the batch-loaded cache, no flash, no
-    // per-row query. Re-key on cacheRevision so a row re-reads the cache when the background catch-up
-    // lookback (pass 2) merges in.
+    // Cache peek as the initial value → a row scrolled back into view renders instantly, with no
+    // flash and no second query. A miss reads that one channel through the indexed per-channel query
+    // and warms the rows below it. Re-key on cacheRevision so a row re-reads after the cache is
+    // dropped (window moved, sync settled, shift changed).
     val cacheRevision by vm.cacheRevision.collectAsStateWithLifecycle()
     val programmes by produceState(initialValue = vm.cachedProgrammes(channel), channel.id, windowStart, cacheRevision) {
         value = vm.cachedProgrammes(channel) ?: vm.programmesFor(channel)

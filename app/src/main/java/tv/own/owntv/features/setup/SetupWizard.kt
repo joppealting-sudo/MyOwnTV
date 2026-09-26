@@ -65,7 +65,9 @@ import tv.own.owntv.core.theme.GlassSurface
 import tv.own.owntv.core.theme.UiFontScale
 import tv.own.owntv.core.theme.UiZoom
 import tv.own.owntv.features.profiles.ProfileEditorDialog
+import tv.own.owntv.features.settings.SectionPickerDialog
 import tv.own.owntv.features.settings.FirstRunLanguageSelector
+import tv.own.owntv.ui.components.AppIconPicker
 import tv.own.owntv.ui.components.BrandLockup
 import tv.own.owntv.ui.components.BrowseMode
 import tv.own.owntv.ui.components.FocusableSurface
@@ -77,6 +79,7 @@ import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.features.settings.EpgSyncDialog
 import tv.own.owntv.features.settings.RemoteBackupRestoreScreen
 import tv.own.owntv.features.settings.SetupLocalSyncScreen
+import tv.own.owntv.features.settings.SolconTvPlusAccountScreen
 import tv.own.owntv.ui.components.StorageBrowser
 import tv.own.owntv.ui.components.dialogPanel
 import tv.own.owntv.ui.components.modalScrim
@@ -88,7 +91,7 @@ import tv.own.owntv.ui.components.summaryText
 import tv.own.owntv.ui.components.warningText
 import tv.own.owntv.ui.theme.OwnTVTheme
 
-private enum class Step { WELCOME, DISPLAY_SIZE, DISCLAIMER, SETUP_CHOICE, SYNC_DEVICE, CREATE_PROFILE, ADD_CONTENT, ADD_SOURCE_CHOOSER, ADD_SOURCE_REMOTE, ADD_SOURCE, IMPORTING, EXISTING, IMPORT_BACKUP_CHOOSER, IMPORT_BACKUP_REMOTE, IMPORT_BACKUP }
+private enum class Step { WELCOME, DISPLAY_SIZE, DISCLAIMER, SETUP_CHOICE, SYNC_DEVICE, CREATE_PROFILE, ADD_CONTENT, ADD_SOURCE_CHOOSER, ADD_SOURCE_REMOTE, ADD_SOURCE_SOLCON, ADD_SOURCE, IMPORTING, EXISTING, IMPORT_BACKUP_CHOOSER, IMPORT_BACKUP_REMOTE, IMPORT_BACKUP }
 
 /**
  * Onboarding for one profile. [firstRun] shows language/welcome/disclaimer; otherwise it starts at profile
@@ -103,6 +106,8 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
     val defaultPlaylistName = stringResource(R.string.setup_name_default_playlist)
     val defaultPortalName = stringResource(R.string.setup_default_portal)
     var step by rememberSaveable(firstRun) { mutableStateOf(if (firstRun) Step.WELCOME else Step.CREATE_PROFILE) }
+    // The profile created in this run, which content added from here on belongs to.
+    var createdProfileId by rememberSaveable { mutableStateOf<Long?>(null) }
     val importState by vm.state.collectAsStateWithLifecycle()
     val progress by vm.progress.collectAsStateWithLifecycle()
     val epgSync by vm.epgSync.collectAsStateWithLifecycle()
@@ -111,6 +116,14 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
     var importOrigin by remember { mutableStateOf(Step.ADD_SOURCE) }
     // Where Back from the backup-restore picker returns to (first-run choice vs. add-content step).
     var backupOrigin by remember { mutableStateOf(Step.ADD_CONTENT) }
+    // The chosen backup file and what the user wants out of it. A file with no choice yet is what
+    // raises the section dialog below; picking a file no longer starts the restore by itself.
+    // Settings → Backup & Restore has always asked which sections to apply — the wizard took the
+    // whole file, so "playlists but not that device's settings" could not be said here.
+    var restoreFile by remember { mutableStateOf<java.io.File?>(null) }
+    var restoreSections by remember { mutableStateOf<Set<tv.own.owntv.core.backup.BackupManager.Section>?>(null) }
+    // "Hardware settings from the other device" — asked with the sections, carried like them.
+    val restoreDeviceSettings = remember { mutableStateOf(false) }
 
     // Refresh the "existing playlists" availability whenever we land on the add-content step.
     LaunchedEffect(step) { if (step == Step.ADD_CONTENT) existing = runCatching { vm.availableExistingSources() }.getOrDefault(emptyList()) }
@@ -142,7 +155,12 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
             )
             Step.CREATE_PROFILE -> ProfileEditorDialog(
                 initial = null,
-                onConfirm = { name, avatar, kids, pin -> vm.createProfile(name.ifBlank { defaultProfileName }, avatar, kids, pin) { step = Step.ADD_CONTENT } },
+                onConfirm = { name, avatar, kids, pin ->
+                    vm.createProfile(name.ifBlank { defaultProfileName }, avatar, kids, pin) { id ->
+                        createdProfileId = id
+                        step = Step.ADD_CONTENT
+                    }
+                },
                 onDismiss = { if (firstRun) step = Step.SETUP_CHOICE else onCancel() },
             )
             Step.ADD_CONTENT -> AddContentScreen(
@@ -154,8 +172,15 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
             )
             Step.ADD_SOURCE_CHOOSER -> AddSourceChooserScreen(
                 onRemote = { step = Step.ADD_SOURCE_REMOTE },
+                onSolcon = { step = Step.ADD_SOURCE_SOLCON },
                 onManual = { step = Step.ADD_SOURCE },
                 onBack = { step = Step.ADD_CONTENT },
+            )
+            Step.ADD_SOURCE_SOLCON -> SolconTvPlusAccountScreen(
+                onBack = { step = Step.ADD_SOURCE_CHOOSER },
+                onSynchronized = { vm.finish(onDone) },
+                // The new profile only becomes active when setup finishes, so name it outright.
+                profileId = createdProfileId,
             )
             Step.ADD_SOURCE_REMOTE -> RemoteSetupScreen(
                 state = vm.remoteState.collectAsStateWithLifecycle().value,
@@ -167,16 +192,16 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
                 onBack = { vm.stopRemoteListener(); step = Step.ADD_SOURCE_CHOOSER },
             )
             Step.ADD_SOURCE -> AddSourceScreen(
-                onStartXtream = { name, server, user, pass, ua, epg, refresh, live, movies, series, _, preferHls ->
-                    vm.startXtream(name.ifBlank { defaultIptvName }, server, user, pass, ua, epg, refresh, live, movies, series, preferHls)
+                onStartXtream = { name, server, user, pass, ua, ref, epg, refresh, live, movies, series, _, preferHls ->
+                    vm.startXtream(name.ifBlank { defaultIptvName }, server, user, pass, ua, epg, refresh, live, movies, series, preferHls, httpReferer = ref)
                     importOrigin = Step.ADD_SOURCE
                     step = Step.IMPORTING
                 },
-                onStartM3u = { name, url, ua, epg, refresh, _ -> vm.startM3u(name.ifBlank { defaultPlaylistName }, url, ua, epg, refresh); importOrigin = Step.ADD_SOURCE; step = Step.IMPORTING },
-                onStartStalker = { name, portalUrl, mac, serialNumber, deviceId, deviceId2, signature, ua, refresh, _, live, movies, series ->
+                onStartM3u = { name, url, ua, ref, epg, refresh, _ -> vm.startM3u(name.ifBlank { defaultPlaylistName }, url, ua, epg, refresh, httpReferer = ref); importOrigin = Step.ADD_SOURCE; step = Step.IMPORTING },
+                onStartStalker = { name, portalUrl, mac, serialNumber, deviceId, deviceId2, signature, ua, ref, refresh, _, live, movies, series ->
                     vm.startStalker(
                         name.ifBlank { defaultPortalName }, portalUrl, mac, serialNumber, deviceId,
-                        deviceId2, signature, ua, refresh, live, movies, series,
+                        deviceId2, signature, ua, refresh, live, movies, series, httpReferer = ref,
                     )
                     importOrigin = Step.ADD_SOURCE
                     step = Step.IMPORTING
@@ -210,16 +235,46 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
                 backups = vm.remoteBackups,
                 onStart = { port -> vm.startRemoteRestore(port) },
                 onStop = { vm.stopRemoteRestore() },
-                // An uploaded file starts the restore; the state-driven IMPORT_BACKUP screen shows
-                // progress, the password prompt, or the result from here on.
-                onBackupReceived = { file -> vm.importBackup(file, onDone); step = Step.IMPORT_BACKUP },
+                // An uploaded file asks what to take out of it first; the state-driven IMPORT_BACKUP
+                // screen shows progress, the password prompt, or the result from here on.
+                onBackupReceived = { file ->
+                    restoreSections = null
+                    restoreFile = file
+                    step = Step.IMPORT_BACKUP
+                },
                 onBack = { vm.stopRemoteRestore(); step = Step.IMPORT_BACKUP_CHOOSER },
             )
             Step.IMPORT_BACKUP -> ImportBackupScreen(
                 state = importState,
-                onPick = { file -> vm.importBackup(file, onDone) }, // restore activates a profile itself
-                onPassword = { file, pass -> vm.restoreWithPassword(file, pass, onDone) },
-                onBack = { vm.reset(); step = backupOrigin },
+                onPick = { file -> restoreSections = null; restoreFile = file },
+                // The same choice, carried across the password question: a sealed file is chosen
+                // from before it can be opened, so the answer has to outlive the prompt.
+                onPassword = { file, pass ->
+                    vm.restoreWithPassword(file, pass, onDone, restoreSections ?: allRestoreSections, restoreDeviceSettings.value)
+                },
+                onBack = { vm.reset(); restoreFile = null; restoreSections = null; step = backupOrigin },
+            )
+        }
+        // A file is chosen and nothing has been asked of it yet — so ask, over whatever is behind.
+        restoreFile?.takeIf { restoreSections == null }?.let { file ->
+            SectionPickerDialog(
+                title = stringResource(R.string.settings_backup_what_restore),
+                // Every section, not only the ones the file holds: Settings can narrow the list
+                // because it has already opened the container, and this has not — a sealed file says
+                // nothing until its password arrives, and asking for that before the user has said
+                // what they want would be the wrong order. Ticking a section the file lacks restores
+                // nothing for it.
+                sections = tv.own.owntv.core.backup.BackupManager.Section.entries,
+                initial = allRestoreSections,
+                confirmLabel = stringResource(R.string.settings_backup_restore_action),
+                onConfirm = { chosen ->
+                    restoreSections = chosen
+                    vm.importBackup(file, onDone, chosen, restoreDeviceSettings.value) // restore activates a profile itself
+                },
+                onDismiss = { vm.reset(); restoreFile = null; step = backupOrigin },
+                // Offered whatever the file is: this has not opened it yet. Harmless for a backup of
+                // this very device, whose hardware settings core restores regardless.
+                deviceSettings = restoreDeviceSettings,
             )
         }
         // Semi-auto EPG: after the first playlist imports, ask → sync (live count) → done (overlays "All set!").
@@ -244,7 +299,7 @@ private fun WelcomeScreen(onNext: () -> Unit) {
             color = OwnTVTheme.colors.primary.copy(alpha = 0.82f),
         )
         Spacer(Modifier.height(19.dp))
-        BrandLockup(markSize = 82, textSize = 62)
+        BrandLockup(markSize = 82, textSize = 62, stacked = true)
         Spacer(Modifier.height(24.dp))
         Text(stringResource(R.string.setup_welcome_tagline), style = MaterialTheme.typography.titleMedium, color = OwnTVTheme.colors.onSurfaceVariant)
         Spacer(Modifier.height(30.dp))
@@ -277,6 +332,7 @@ private fun DisplaySizeScreen(onNext: () -> Unit, onBack: () -> Unit) {
     val vm: DisplaySizeViewModel = koinViewModel()
     val zoom by vm.uiZoomPercent.collectAsStateWithLifecycle()
     val fontSize by vm.fontSizePercent.collectAsStateWithLifecycle()
+    val appIcon by vm.appIcon.collectAsStateWithLifecycle()
     val colors = OwnTVTheme.colors
     val fr = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
@@ -330,6 +386,16 @@ private fun DisplaySizeScreen(onNext: () -> Unit, onBack: () -> Unit) {
             onDecrease = { vm.setFontSize(fontSize - UiFontScale.STEP) },
             onIncrease = { vm.setFontSize(fontSize + UiFontScale.STEP) },
         )
+        Spacer(Modifier.height(18.dp))
+        // No restart prompt here: nothing is on the home screen yet, and the pick applies as soon as
+        // the app is next in the background.
+        Text(
+            stringResource(R.string.settings_app_icon),
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface,
+        )
+        Spacer(Modifier.height(8.dp))
+        AppIconPicker(selected = appIcon, onPick = vm::setAppIcon)
         Spacer(Modifier.height(22.dp))
         SetupAccentRule()
         Spacer(Modifier.height(18.dp))
@@ -771,6 +837,10 @@ private fun ImportBackupScreen(
         )
     }
 }
+
+/** Every section, the wizard's starting point for a restore. */
+private val allRestoreSections: Set<tv.own.owntv.core.backup.BackupManager.Section>
+    get() = tv.own.owntv.core.backup.BackupManager.Section.entries.toSet()
 
 /** Restore chooser: send the backup from another device (LAN companion server) or pick a local file. */
 @Composable

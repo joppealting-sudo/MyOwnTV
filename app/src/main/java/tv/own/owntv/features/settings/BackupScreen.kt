@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import tv.own.owntv.ui.components.BrowseMode
 import tv.own.owntv.ui.components.FocusableSurface
 import tv.own.owntv.ui.components.OwnTVButton
 import tv.own.owntv.ui.components.OwnTVIcon
+import tv.own.owntv.ui.components.OwnTVPopup
 import tv.own.owntv.ui.components.dialogPanel
 import tv.own.owntv.ui.components.modalScrim
 import tv.own.owntv.ui.components.OwnTVButtonStyle
@@ -53,7 +55,6 @@ import tv.own.owntv.ui.components.roundedPanel
 import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.core.theme.GlassSurface
 import tv.own.owntv.ui.theme.OwnTVTheme
-import tv.own.owntv.ui.theme.PopupFontTheme
 import java.io.File
 
 /**
@@ -66,6 +67,12 @@ fun BackupScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val vm: BackupViewModel = koinViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val colors = OwnTVTheme.colors
+    // A restore can bring a different icon colour than the launcher shows: offer the restart.
+    val restoredIcon by vm.restoredIcon.collectAsStateWithLifecycle()
+    val appliedIcon = tv.own.owntv.ui.components.rememberAppliedIcon()
+    restoredIcon?.takeIf { it != appliedIcon }?.let { icon ->
+        tv.own.owntv.ui.components.AppIconRestartDialog(icon, onDismiss = vm::clearRestoredIcon)
+    }
 
     var browser by remember { mutableStateOf(BrowseMode.FOLDER) } // which picker
     var showBrowser by remember { mutableStateOf(false) }
@@ -243,13 +250,15 @@ fun BackupScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     // Restore step 2: the picked file was inspected — choose which of its sections to apply.
     (state as? BackupViewModel.State.ChooseRestore)?.let { choose ->
+        val deviceSettings = remember(choose.file) { mutableStateOf(false) }
         SectionPickerDialog(
             title = stringResource(R.string.settings_backup_what_restore),
             sections = BackupManager.Section.entries.filter { it in choose.available },
             initial = choose.available,
             confirmLabel = stringResource(R.string.settings_backup_restore_action),
-            onConfirm = { chosen -> vm.beginImport(choose.file, chosen, choose.encrypted, choose.password) },
+            onConfirm = { chosen -> vm.beginImport(choose.file, chosen, choose.encrypted, choose.password, deviceSettings.value) },
             onDismiss = { vm.reset() },
+            deviceSettings = deviceSettings.takeIf { choose.fromOtherDevice },
         )
     }
 
@@ -293,9 +302,9 @@ fun BackupScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             skipLabel = if (need.sealed) null else stringResource(R.string.settings_backup_skip_passwords),
             onConfirm = { pass ->
                 val sections = need.sections
-                if (sections == null) vm.unlock(need.file, pass) else vm.import(need.file, sections, pass)
+                if (sections == null) vm.unlock(need.file, pass) else vm.import(need.file, sections, pass, need.deviceSettings)
             },
-            onSkip = { need.sections?.let { vm.import(need.file, it, null) } },
+            onSkip = { need.sections?.let { vm.import(need.file, it, null, need.deviceSettings) } },
             onDismiss = { vm.reset() },
         )
     }
@@ -372,7 +381,7 @@ private fun RemoteLocalChooserDialog(
     onLocal: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    PopupFontTheme {
+    OwnTVPopup(onDismissRequest = onDismiss) {
     val colors = OwnTVTheme.colors
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
@@ -407,7 +416,7 @@ private fun BackupPasswordDialog(
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    PopupFontTheme {
+    OwnTVPopup(onDismissRequest = onDismiss) {
     val colors = OwnTVTheme.colors
     var password by remember { mutableStateOf("") }
     val firstFocus = remember { FocusRequester() }
@@ -459,7 +468,7 @@ private fun ProfilePickerDialog(
     onConfirm: (Set<Long>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    PopupFontTheme {
+    OwnTVPopup(onDismissRequest = onDismiss) {
     val colors = OwnTVTheme.colors
     var ticked by remember(activeId) {
         mutableStateOf(if (profiles.any { it.id == activeId }) setOf(activeId) else emptySet())
@@ -530,7 +539,7 @@ private fun ProfilePinDialog(
     onUnlocked: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    PopupFontTheme {
+    OwnTVPopup(onDismissRequest = onDismiss) {
     val colors = OwnTVTheme.colors
     var pin by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
@@ -594,17 +603,29 @@ private fun sectionDescriptionRes(section: BackupManager.Section): Int = when (s
     BackupManager.Section.SETTINGS -> R.string.settings_backup_section_settings_desc
 }
 
-/** Multi-select dialog over backup sections, with an "Everything" toggle on top. */
+/**
+ * Multi-select dialog over backup sections, with an "Everything" toggle on top.
+ *
+ * Internal rather than private because the first-run wizard asks the same question with the same
+ * words — see `SetupWizard.kt`. One dialog, so the two places can never drift apart.
+ */
 @Composable
-private fun SectionPickerDialog(
+internal fun SectionPickerDialog(
     title: String,
     sections: List<BackupManager.Section>,
     initial: Set<BackupManager.Section>,
     confirmLabel: String,
     onConfirm: (Set<BackupManager.Section>) -> Unit,
     onDismiss: () -> Unit,
+    /**
+     * Restore only: offer to take the *other* device's hardware settings too (engine, decoder, frame
+     * rate, HDR, surround). Null hides the row — export, or a backup this device wrote itself, whose
+     * hardware settings core restores anyway. Unticked unless the user ticks it; not part of
+     * "Everything", which is about what the file holds, not about this device.
+     */
+    deviceSettings: MutableState<Boolean>? = null,
 ) {
-    PopupFontTheme {
+    OwnTVPopup(onDismissRequest = onDismiss) {
     val colors = OwnTVTheme.colors
     var selected by remember { mutableStateOf(initial) }
     val firstFocus = remember { FocusRequester() }
@@ -630,6 +651,15 @@ private fun SectionPickerDialog(
                     desc = stringResource(sectionDescriptionRes(section)),
                     checked = section in selected,
                     onToggle = { selected = if (section in selected) selected - section else selected + section },
+                )
+            }
+            if (deviceSettings != null && BackupManager.Section.SETTINGS in selected) {
+                Spacer(Modifier.height(6.dp))
+                CheckRow(
+                    label = stringResource(R.string.settings_backup_device_settings),
+                    desc = stringResource(R.string.settings_backup_device_settings_desc),
+                    checked = deviceSettings.value,
+                    onToggle = { deviceSettings.value = !deviceSettings.value },
                 )
             }
 

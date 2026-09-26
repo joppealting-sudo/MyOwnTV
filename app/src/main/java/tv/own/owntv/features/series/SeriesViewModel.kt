@@ -81,6 +81,8 @@ import tv.own.owntv.core.live.serialize
 
 class SeriesViewModel(
     private val seriesDao: SeriesDao,
+    /** Lets the browse screen tell core's drain which category to fill first (core's N1c). */
+    private val catalogPriority: tv.own.owntv.core.sync.CatalogPriority,
     private val categoryDao: CategoryDao,
     private val favoriteDao: FavoriteDao,
     private val historyDao: HistoryDao,
@@ -661,6 +663,14 @@ class SeriesViewModel(
     fun select(key: LiveKey) {
         if (lockedKey != null) return
         _selected.value = key
+        // Core's lazy-catalogue drain fills categories in the provider's order; tell it the user is
+        // here so this one is served next (core's N1c). A no-op for every playlist that was not
+        // lazily added, and for a category that is already complete.
+        if (key is LiveKey.Folder) {
+            viewModelScope.launch { runCatching { catalogPriority.requestFirst(key.id) } }
+        } else {
+            catalogPriority.clear()
+        }
     }
     fun setSearchQuery(query: String) { _search.value = query }
     fun onSeriesFocused(s: SeriesEntity) { _selectedSeries.value = s }
@@ -911,10 +921,6 @@ class SeriesViewModel(
         }
     }
 
-    /** The source User-Agent behind an episode — the external player needs it as an intent extra. */
-    private suspend fun episodeSourceUa(episode: EpisodeEntity): String? =
-        seriesDao.getSeriesById(episode.seriesId)?.let { sourceDao.getById(it.sourceId) }?.userAgent
-
     fun playEpisodeExternal(episode: EpisodeEntity) {
         _lastPlayedEpisodeId.value = episode.id
         viewModelScope.launch {
@@ -923,12 +929,13 @@ class SeriesViewModel(
             if (pid != null && !tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, show.categoryId, profileDao, categoryDao)) return@launch
             Log.d(TAG, "playEpisodeExternal episodeId=${episode.id}")
             val url = resolvedEpisodeUrlOrNull(episode) ?: return@launch
+            val source = sourceDao.getById(show.sourceId)
             externalPlayerLauncher.launch(
                 url = url,
                 title = episode.name.takeIf { it.isNotBlank() },
                 subtitle = show.name,
-                userAgent = episodeSourceUa(episode),
-                httpHeaders = episode.httpHeaders,
+                userAgent = source?.userAgent,
+                httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
             )
             if (pid != null) {
                 runCatching {
@@ -965,12 +972,13 @@ class SeriesViewModel(
             if (settings.externalPlayerSeries.first() && episode.drmConfig == null) {
                 Log.d(TAG, "playEpisodeQueue seriesId=${show.id} episodeId=${episode.id} -> external player")
                 val url = resolvedEpisodeUrlOrNull(episode) ?: return@launch
+                val source = sourceDao.getById(show.sourceId)
                 externalPlayerLauncher.launch(
                     url = url,
                     title = episode.name.takeIf { it.isNotBlank() },
                     subtitle = show.name,
-                    userAgent = sourceDao.getById(show.sourceId)?.userAgent,
-                    httpHeaders = episode.httpHeaders,
+                    userAgent = source?.userAgent,
+                    httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
                 )
                 if (pid != null) {
                     runCatching {
@@ -1007,17 +1015,21 @@ class SeriesViewModel(
                             // P6 — engine pins key on this, not on the URL: for Stalker the queue's
                             // stored URL is the shared season cmd and the played URL is minted per item.
                             contentKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "EPISODE", ep.remoteId),
+                            // v44 — audio/subtitle choices are remembered per series (owner decision 11).
+                            trackKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "SERIES", show.remoteId),
                         ),
                         resolveUrl = if (needsResolve && source != null) {
                             { streamUrlResolver.resolve(source, ep.streamUrl, vod = true, episode = ep.episodeNumber) }
                         } else null,
-                        httpHeaders = ep.httpHeaders,
+                        httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(ep.httpHeaders, source),
                         drmConfig = ep.drmConfig,
+                        manifestType = ep.manifestType,
                     )
                 },
                 startIndex = startIndex,
                 startPositionMs = startPositionMs,
                 userAgent = sourceUa,
+                vodEngineOverride = tv.own.owntv.core.settings.SourceOverrides.vodEngineOf(source),
             )
             // Enable the player's OpenSubtitles search for this episode (subtitle plan §4). The parent
             // series' TMDB id gives the strongest episode match (review R7) when metadata is available.

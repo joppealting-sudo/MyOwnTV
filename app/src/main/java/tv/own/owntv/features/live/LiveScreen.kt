@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -55,7 +56,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
-import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import androidx.tv.material3.MaterialTheme
@@ -161,22 +161,25 @@ fun LiveScreen(
     val moveState by vm.moveState.collectAsStateWithLifecycle()
     val categoryMoveState by vm.categoryMoveState.collectAsStateWithLifecycle()
 
-    // Current programme title for each loaded channel (id → title), batched in ONE query against the
-    // stored guide. Drives the small "now playing" subtitle on each channel row. Recomputed when the page
-    // contents change and every 60s (the programme airing "now" turns over). Channels with no guide are
-    // simply absent from the map → their row shows no second line.
-    val channelIdsKey = remember(channels.itemSnapshotList) {
-        channels.itemSnapshotList.items.filterNotNull().map { it.id }
+    // Current programme title for each loaded channel (id → title), against the stored guide. Drives
+    // the small "now playing" subtitle on each channel row. Channels with no guide are absent from the
+    // map → their row shows no second line.
+    //
+    // An appended page asks only about the channels it added; the view model keeps the rest. This
+    // used to re-query every loaded channel on every append and again every 60 seconds, which deep
+    // in a large category was a dozen chunked queries a minute to learn nothing new.
+    val nowPlaying by vm.nowPlaying.collectAsStateWithLifecycle()
+    val loadedChannels = channels.itemSnapshotList.items.filterNotNull()
+    LaunchedEffect(loadedChannels.size, loadedChannels.firstOrNull()?.id, loadedChannels.lastOrNull()?.id) {
+        vm.ensureNowPlaying(loadedChannels)
     }
-    val nowPlaying by produceState<Map<Long, String>>(initialValue = emptyMap(), channelIdsKey) {
-        if (channelIdsKey.isEmpty()) { value = emptyMap(); return@produceState }
-        val loaded = channels.itemSnapshotList.items.filterNotNull()
-        value = runCatching { vm.nowPlayingFor(loaded) }.getOrDefault(emptyMap())
-        // Refresh periodically so a programme ending/starting is reflected while the list stays open.
-        // This producer is auto-cancelled (and restarted) when channelIdsKey changes.
+    // Turnover happens on the minute, so wait for the next one rather than 60s from mount — otherwise
+    // rows change late and at different instants from each other.
+    LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(60_000)
-            value = runCatching { vm.nowPlayingFor(loaded) }.getOrDefault(emptyMap())
+            val now = System.currentTimeMillis()
+            kotlinx.coroutines.delay(60_000 - (now % 60_000))
+            vm.refreshNowPlaying(channels.itemSnapshotList.items.filterNotNull())
         }
     }
     // Preview runs only when the player isn't busy (previewEnabled) AND the user hasn't turned it off.
@@ -214,6 +217,7 @@ fun LiveScreen(
     // state map (so A→B→A lands back where you were in A). OFF → reset the shared state to the top whenever
     // the category changes (fixes the cross-category scroll-leak bug).
     val perCategoryStates = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.LazyListState>() }
+    val perCategoryChannelIds = remember { mutableStateMapOf<LiveKey, Long>() }
     val effectiveListState =
         if (rememberLive) perCategoryStates.getOrPut(selectedKey) { androidx.compose.foundation.lazy.LazyListState() }
         else listState
@@ -430,7 +434,12 @@ fun LiveScreen(
             // over the wallpaper next to a second one.
             .then(
                 if (lockedKey == null) {
-                    Modifier.roundedPanel(fillColor = ContentPanelFill).padding(BrowseContainerPadding)
+                    Modifier.roundedPanel(fillColor = ContentPanelFill).padding(
+                        start = 0.dp,
+                        top = BrowseContainerPadding,
+                        end = BrowseContainerPadding,
+                        bottom = BrowseContainerPadding,
+                    )
                 } else {
                     Modifier
                 },
@@ -439,7 +448,8 @@ fun LiveScreen(
     ) {
     val previewVisible = panelShares?.preview != 0
     val innerGapTotal = browsePanelGapTotal(previewVisible)
-    val panels = panelShares?.let { computePanelWidths(it, maxWidth, innerGapTotal) }
+    val contentWidth = if (lockedKey == null) maxWidth - BrowseContainerPadding else maxWidth
+    val panels = panelShares?.let { computePanelWidths(it, contentWidth, innerGapTotal) }
     Row(
         modifier = Modifier
             .fillMaxSize(),
@@ -448,7 +458,7 @@ fun LiveScreen(
         // their own three tabs above it, so there is no category rail to draw.
         if (lockedKey == null) {
         CategoryRail(
-            width = panels?.category ?: Dimens.RailWidthFixed,
+            width = (panels?.category ?: Dimens.RailWidthFixed) + BrowseContainerPadding,
             categories = railItems.map {
                 RailCategory(
                     it.displayLabel(),
@@ -475,6 +485,31 @@ fun LiveScreen(
             onFocused = { if (previewEnabled) vm.stopPreview() },
             listState = catListState,
             focusRequester = railFocus,
+            onNavigateRight = {
+                val targetId = if (rememberLive) {
+                    perCategoryChannelIds[selectedKey] ?: previewChannel?.id
+                } else {
+                    previewChannel?.id
+                }
+                scope.launch {
+                    if (channels.itemCount > 0) {
+                        val targetIdx = if (targetId != null) {
+                            channels.itemSnapshotList.items.indexOfFirst { it.id == targetId }.takeIf { it >= 0 } ?: 0
+                        } else 0
+                        runCatching { effectiveListState.scrollToItem(targetIdx) }
+                        withFrameNanos { }
+                        repeat(3) {
+                            val focused = if (targetId != null) {
+                                runCatching { selFocus.requestFocus() }.isSuccess
+                            } else false
+                            if (focused) return@launch
+                            if (runCatching { firstItemFocus.requestFocus() }.isSuccess) return@launch
+                            if (runCatching { selFocus.requestFocus() }.isSuccess) return@launch
+                            withFrameNanos { }
+                        }
+                    }
+                }
+            },
             showPanel = false,
             modifier = Modifier
                 .onFocusChanged { railPaneFocused = it.hasFocus }
@@ -501,6 +536,12 @@ fun LiveScreen(
         )
 
         Spacer(Modifier.width(BrowseColumnGap))
+        }
+
+        val targetChannelId = if (rememberLive) {
+            perCategoryChannelIds[selectedKey] ?: previewChannel?.id
+        } else {
+            previewChannel?.id
         }
 
         // Layer 3 — header + channel list (fixed-width column; the preview pane fills the rest)
@@ -557,22 +598,43 @@ fun LiveScreen(
                 // only for directional entry from outside (internal moves don't re-trigger it).
                 .focusProperties {
                     onEnter = {
-                        if (runCatching { selFocus.requestFocus() }.isFailure) {
-                            runCatching { firstItemFocus.requestFocus() }
+                        val focused = if (targetChannelId != null) {
+                            runCatching { selFocus.requestFocus() }.isSuccess
+                        } else false
+                        if (!focused) {
+                            if (runCatching { firstItemFocus.requestFocus() }.isFailure) {
+                                runCatching { selFocus.requestFocus() }
+                            }
                         }
                     }
                 }
                 // Held Up/Down can outrun the lazy list's composition and escape this pane
-                // (landing on the top bar) — trap vertical exits; Left/Right/Back leave normally.
+                // (landing on the top bar) — trap vertical exits; D-pad Right is also trapped
+                // so remote navigation does not escape to the TopBar or preview pane; Left/Back leave normally.
                 // Plan Z — while pinned there IS somewhere above to go: the More screen's tab
                 // strip. It owns the trap instead, so Up reaches the tabs and still cannot escape
                 // past them to the shell's top bar.
-                .then(if (lockedKey == null) Modifier.trapVerticalFocusExit() else Modifier)
+                .then(
+                    if (lockedKey == null) {
+                        Modifier.focusProperties {
+                            onExit = {
+                                if (requestedFocusDirection == FocusDirection.Up ||
+                                    requestedFocusDirection == FocusDirection.Down ||
+                                    requestedFocusDirection == FocusDirection.Right
+                                ) {
+                                    cancelFocusChange()
+                                }
+                            }
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
                 .focusGroup()
         ) {
             Text(
-                stringResource(R.string.content_section_category, stringResource(R.string.common_nav_live_tv), selectedLabel),
-                style = MaterialTheme.typography.headlineMedium,
+                stringResource(R.string.common_nav_live_tv),
+                style = MaterialTheme.typography.headlineLarge,
                 color = OwnTVTheme.colors.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -586,11 +648,26 @@ fun LiveScreen(
             )
             Spacer(Modifier.height(14.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .focusProperties {
+                        onEnter = {
+                            // Prevent entering search/sort horizontally from the category rail (D-pad Right).
+                            // SearchBar and SortChip remain fully accessible by pressing Up from the channel rows.
+                            if (requestedFocusDirection == FocusDirection.Right ||
+                                requestedFocusDirection == FocusDirection.Left
+                            ) {
+                                cancelFocusChange()
+                            }
+                        }
+                    }
+                    .focusGroup(),
+            ) {
                 SearchBar(
                     query = searchQuery,
                     onQueryChange = vm::setSearchQuery,
-                    placeholder = stringResource(R.string.content_search_channels, selectedLabel),
+                    placeholder = stringResource(R.string.content_search_channels),
                     modifier = Modifier.weight(1f).onFocusChanged { if (it.hasFocus && previewEnabled) vm.stopPreview() },
                 )
                 Spacer(Modifier.size(10.dp))
@@ -615,6 +692,23 @@ fun LiveScreen(
                     ) { index ->
                         val channel = channels[index]
                         if (channel != null) {
+                            // Only the rows entering or leaving the preview recompose on a focus step,
+                            // instead of every visible row re-reading the previewed channel.
+                            val isPreviewed by remember(channel.id) {
+                                androidx.compose.runtime.derivedStateOf { previewChannel?.id == channel.id }
+                            }
+                            // The remembered channel (targetChannelId above), derived per row the same way,
+                            // so a D-pad step moves the focus target without recomposing every visible row.
+                            val isTarget by remember(channel.id) {
+                                androidx.compose.runtime.derivedStateOf {
+                                    val target = if (rememberLive) {
+                                        perCategoryChannelIds[selectedKey] ?: previewChannel?.id
+                                    } else {
+                                        previewChannel?.id
+                                    }
+                                    target == channel.id
+                                }
+                            }
                             ChannelRow(
                                 channel = channel,
                                 isFavorite = favoriteIds.contains(channel.id),
@@ -622,7 +716,7 @@ fun LiveScreen(
                             // already resolved; the channel under the cursor is answered from the
                             // preview ITSELF, so the row and the pane beside it can never disagree and
                             // the line appears at once rather than at the next 60s refresh.
-                            nowTitle = if (channel.id == previewChannel?.id) {
+                            nowTitle = if (isPreviewed) {
                                 nowNext?.now?.title?.takeIf { it.isNotBlank() } ?: nowPlaying[channel.id]
                             } else {
                                 nowPlaying[channel.id]
@@ -632,10 +726,15 @@ fun LiveScreen(
                                 modifier = Modifier.gridFocusTarget(
                                     itemId = channel.id, index = index,
                                     contextId = contextChannelId, contextFocus = contextFocus,
-                                    selectedId = previewChannel?.id, selectedFocus = selFocus,
+                                    selectedId = if (isTarget) channel.id else null, selectedFocus = selFocus,
                                     firstItemFocus = firstItemFocus,
                                 ),
-                                onFocus = { vm.onChannelFocused(channel) },
+                                onFocus = {
+                                    vm.onChannelFocused(channel)
+                                    if (rememberLive) {
+                                        perCategoryChannelIds[selectedKey] = channel.id
+                                    }
+                                },
                                 onClick = {
                                     vm.watchFullscreen(channel, channels.itemSnapshotList.items.filterNotNull())
                                     // External player on for Live TV: the channel went to another app, so
@@ -754,7 +853,11 @@ fun LiveScreen(
             onMatchEpg = { matchingEpg = ch; contextChannel = null },
             onEpgOffset = { offsettingEpg = ch; contextChannel = null },
             onCatchup = { catchupChannel = ch; contextChannel = null },
-            onRecord = { vm.recordNow(ch); contextChannel = null },
+            onRecord = if (tv.own.owntv.provider.solcon.SolconPlayback.canRecord(ch.streamUrl)) {
+                { vm.recordNow(ch); contextChannel = null }
+            } else {
+                null
+            },
             onPlayExternal = { vm.playExternal(ch); contextChannel = null },
             // Only offered once Multiview is switched on. Adding is silent apart from the toast: the
             // grid opens when the user plays a channel, which is the gesture that says "now".
@@ -887,15 +990,11 @@ private fun ChannelRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Box(
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(colors.surfaceContainerLowest),
-                contentAlignment = Alignment.Center,
+            tv.own.owntv.ui.components.ChannelLogoTile(
+                logoUrl = channel.displayLogoUrl,
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
             ) {
-                if (!channel.displayLogoUrl.isNullOrBlank()) {
-                    AsyncImage(model = channel.displayLogoUrl, contentDescription = null, modifier = Modifier.fillMaxSize())
-                } else {
-                    OwnTVIcon(OwnTVIcon.LIVE_TV, tint = colors.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                }
+                OwnTVIcon(OwnTVIcon.LIVE_TV, tint = colors.onSurfaceVariant, modifier = Modifier.size(24.dp))
             }
             // Provider channel number, in a fixed-width strip so every name below starts at the same x
             // however many digits the number has. Hidden entirely when the setting is off.
@@ -947,7 +1046,8 @@ private fun ChannelContextMenu(
     onMatchEpg: () -> Unit,
     onEpgOffset: () -> Unit,
     onCatchup: () -> Unit,
-    onRecord: () -> Unit,
+    // Null for a channel the recorder cannot fetch (Solcon TV+, multicast).
+    onRecord: (() -> Unit)?,
     onPlayExternal: () -> Unit,
     // Null unless Multiview is switched on: keep this channel for the grid (Plan D, B5).
     onAddToMultiview: (() -> Unit)?,
@@ -961,6 +1061,7 @@ private fun ChannelContextMenu(
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     androidx.activity.compose.BackHandler { onDismiss() }
+    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss) {
     Box(
         modifier = Modifier.fillMaxSize().modalScrim()
             .trapAllFocusExit().focusGroup()
@@ -983,7 +1084,7 @@ private fun ChannelContextMenu(
                 if (hasCatchup) add(MenuAction("catchup", stringResource(R.string.content_catchup), group = 1, onClick = onCatchup))
                 // Record this channel from now. The guide's Record needs a programme, so a channel
                 // the provider publishes no guide for can only be recorded from here.
-                add(MenuAction("record", stringResource(R.string.recording_record), OwnTVIcon.LIVE_TV, group = 1, onClick = onRecord))
+                if (onRecord != null) add(MenuAction("record", stringResource(R.string.recording_record), OwnTVIcon.LIVE_TV, group = 1, onClick = onRecord))
                 // Always offered, regardless of the Live TV external-player default — this is the per-channel
                 // escape hatch for a stream neither in-app engine can open (same as Movies/Series/Downloads).
                 add(MenuAction("play_external", stringResource(R.string.content_play_external_short), OwnTVIcon.PLAY, group = 1, onClick = onPlayExternal))
@@ -1013,6 +1114,7 @@ private fun ChannelContextMenu(
             ChannelMenuDivider()
             ChannelMenuAction(stringResource(R.string.content_close), onDismiss, OwnTVIcon.CLOSE, Modifier.fillMaxWidth())
         }
+    }
     }
 }
 
@@ -1107,9 +1209,15 @@ private fun LivePreviewPane(
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(colors.surfaceContainerLowest),
             contentAlignment = Alignment.Center,
         ) {
-            if (!channel.displayLogoUrl.isNullOrBlank()) {
-                AsyncImage(model = channel.displayLogoUrl, contentDescription = null, modifier = Modifier.size(120.dp))
-            } else {
+            // No fill of its own: the 16:9 box behind it is already the video container's. The tile
+            // plates itself only if this channel's logo would be unreadable. Video covers it anyway
+            // once playback starts.
+            tv.own.owntv.ui.components.ChannelLogoTile(
+                logoUrl = channel.displayLogoUrl,
+                modifier = Modifier.size(160.dp).clip(RoundedCornerShape(12.dp)),
+                imageModifier = Modifier.size(120.dp),
+                fill = Color.Transparent,
+            ) {
                 OwnTVIcon(OwnTVIcon.LIVE_TV, tint = colors.onSurfaceVariant, modifier = Modifier.size(56.dp))
             }
             if (previewPlaying) {
@@ -1474,14 +1582,14 @@ private fun CatchupDialog(
 internal fun EpgMatchDialog(
     channelName: String,
     currentMatch: String?,
-    loadChannels: suspend (String) -> List<tv.own.owntv.core.database.entity.EpgChannelEntity>,
+    loadChannels: suspend (String) -> List<tv.own.owntv.core.epg.GuideCandidate>,
     onPick: (String) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = OwnTVTheme.colors
     var query by remember { mutableStateOf("") }
-    val results by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.EpgChannelEntity>?>(initialValue = null, query) {
+    val results by androidx.compose.runtime.produceState<List<tv.own.owntv.core.epg.GuideCandidate>?>(initialValue = null, query) {
         kotlinx.coroutines.delay(250)
         value = runCatching { loadChannels(query) }.getOrDefault(emptyList())
     }
@@ -1505,7 +1613,7 @@ internal fun EpgMatchDialog(
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss) {
     tv.own.owntv.ui.theme.PopupFontTheme(fontScale = 0.75f) {
     androidx.compose.foundation.layout.Box(
-        Modifier.fillMaxSize().modalScrim().focusGroup(),
+        Modifier.fillMaxSize().modalScrim().trapAllFocusExit().focusGroup(),
         contentAlignment = Alignment.Center,
     ) {
         // Same small-screen cap as CatchupDialog: search bar + buttons must stay reachable.
@@ -1536,7 +1644,7 @@ internal fun EpgMatchDialog(
                             style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                         )
                         else -> LazyColumn(Modifier.fillMaxWidth().height(listHeight), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(list, key = { it.id }) { epg ->
+                            items(list, key = { it.epgChannelId }) { epg ->
                                 FocusableSurface(
                                     onClick = { onPick(epg.epgChannelId) },
                                     modifier = if (epg == list.first()) Modifier.fillMaxWidth().focusRequester(firstItemFocus) else Modifier.fillMaxWidth(),

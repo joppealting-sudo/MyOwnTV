@@ -80,6 +80,7 @@ import tv.own.owntv.ui.components.BrowseMode
 import tv.own.owntv.ui.components.FocusableSurface
 import tv.own.owntv.ui.components.OwnTVButton
 import tv.own.owntv.ui.components.OwnTVButtonStyle
+import tv.own.owntv.ui.components.DayStepperDialog
 import tv.own.owntv.ui.components.OwnTVPopup
 import tv.own.owntv.ui.components.OwnTVTextField
 import tv.own.owntv.ui.components.dialogPanel
@@ -110,6 +111,7 @@ fun AddSourceScreen(
         user: String,
         pass: String,
         userAgent: String,
+        referer: String,
         epgUrl: String,
         autoRefresh: PlaylistRefresh,
         live: SyncScopeChoice,
@@ -118,7 +120,7 @@ fun AddSourceScreen(
         isDefault: Boolean,
         preferHls: Boolean,
     ) -> Unit,
-    onStartM3u: (name: String, url: String, userAgent: String, epgUrl: String, autoRefresh: PlaylistRefresh, isDefault: Boolean) -> Unit,
+    onStartM3u: (name: String, url: String, userAgent: String, referer: String, epgUrl: String, autoRefresh: PlaylistRefresh, isDefault: Boolean) -> Unit,
     // The last submission from the Remote companion screen, retained as a StateFlow so it survives the
     // Remote → Manual hand-off (this screen mounts after the remote browser posted). When present, the matching
     // type is selected and the fields pre-filled; the user then presses Start Import. Consumed once via
@@ -141,6 +143,7 @@ fun AddSourceScreen(
         deviceId2: String,
         signature: String,
         userAgent: String,
+        referer: String,
         autoRefresh: PlaylistRefresh,
         isDefault: Boolean,
         live: SyncScopeChoice,
@@ -173,6 +176,7 @@ fun AddSourceScreen(
     var showUaPresetPicker by remember { mutableStateOf(false) }
     var epgUrl by remember(initial) { mutableStateOf(initial?.epgUrl ?: "") }
     var userAgent by remember(initial) { mutableStateOf(initial?.userAgent ?: "") }
+    var referer by remember(initial) { mutableStateOf(initial?.httpReferer ?: "") }
     var autoRefresh by remember(initialAutoRefresh) { mutableStateOf(initialAutoRefresh) }
     var isDefault by remember(initialIsDefault) { mutableStateOf(initialIsDefault) }
     var preferHls by remember(initial) { mutableStateOf(initial?.preferHls == true) }
@@ -247,14 +251,15 @@ fun AddSourceScreen(
     fun formSource(): SourceEntity {
         fun opt(value: String) = value.trim().takeIf { it.isNotBlank() }
         val ua = opt(userAgent)
+        val ref = opt(referer)
         return when (kind) {
             SourceKind.XTREAM -> SourceEntity(
                 id = initial?.id ?: 0L, name = name, type = SourceType.XTREAM,
-                url = server.trim(), username = username.trim(), password = password, userAgent = ua,
+                url = server.trim(), username = username.trim(), password = password, userAgent = ua, httpReferer = ref,
             )
             SourceKind.M3U -> SourceEntity(
                 id = initial?.id ?: 0L, name = name, type = SourceType.M3U,
-                url = m3uUrl.trim(), userAgent = ua,
+                url = m3uUrl.trim(), userAgent = ua, httpReferer = ref,
             )
             SourceKind.STALKER -> SourceEntity(
                 id = initial?.id ?: 0L, name = name, type = SourceType.STALKER,
@@ -264,6 +269,7 @@ fun AddSourceScreen(
                 stalkerDeviceId2 = opt(stalkerDeviceId2),
                 stalkerSignature = opt(stalkerSignature),
                 userAgent = ua,
+                httpReferer = ref,
             )
         }
     }
@@ -511,6 +517,8 @@ fun AddSourceScreen(
             // Xtream server the guide URL is still derived automatically; M3U EPG can be added there.
             Spacer(Modifier.height(14.dp))
             OwnTVTextField(userAgent, { userAgent = it }, label = stringResource(R.string.setup_user_agent_optional), placeholder = stringResource(R.string.setup_user_agent_example), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(10.dp))
+            OwnTVTextField(referer, { referer = it }, label = stringResource(R.string.setup_referer_optional), placeholder = stringResource(R.string.setup_referer_example), modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(10.dp))
             OwnTVButton(
@@ -627,11 +635,11 @@ fun AddSourceScreen(
                     label = if (editing) stringResource(R.string.setup_update_source_save) else stringResource(R.string.setup_start_import),
                     onClick = {
                         when (kind) {
-                            SourceKind.XTREAM -> onStartXtream(name, server, username, password, userAgent, epgUrl, autoRefresh, syncLive, syncMovies, syncSeries, isDefault, preferHls)
-                            SourceKind.M3U -> onStartM3u(name, m3uUrl, userAgent, epgUrl, autoRefresh, isDefault)
+                            SourceKind.XTREAM -> onStartXtream(name, server, username, password, userAgent, referer, epgUrl, autoRefresh, syncLive, syncMovies, syncSeries, isDefault, preferHls)
+                            SourceKind.M3U -> onStartM3u(name, m3uUrl, userAgent, referer, epgUrl, autoRefresh, isDefault)
                             SourceKind.STALKER -> onStartStalker?.invoke(
                                 name, portalUrl, mac, stalkerSerialNumber, stalkerDeviceId, stalkerDeviceId2,
-                                stalkerSignature, userAgent, autoRefresh, isDefault, syncLive, syncMovies, syncSeries,
+                                stalkerSignature, userAgent, referer, autoRefresh, isDefault, syncLive, syncMovies, syncSeries,
                             )
                         }
                     },
@@ -737,88 +745,20 @@ internal fun playlistAutoRefreshLabel(refresh: PlaylistRefresh): String =
     }
 
 /**
- * Day stepper for the Manual auto-refresh interval. One focusable value that left/right steps by a
- * day; the remote's own key repeat handles holding. The range clamps rather than wraps, so a held
- * key settles on an end instead of jumping from 99 back to 1.
+ * Day stepper for the Manual auto-refresh interval — [DayStepperDialog] with the playlist's own
+ * wording and bounds.
  */
 @Composable
 private fun ManualDaysDialog(initialDays: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
-    OwnTVPopup(onDismissRequest = onDismiss) {
-        val colors = OwnTVTheme.colors
-        val layoutDirection = LocalLayoutDirection.current
-        var days by remember { mutableIntStateOf(initialDays) }
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-        BackHandler { onDismiss() }
-        Box(Modifier.fillMaxSize().modalScrim().trapAllFocusExit().focusGroup(), contentAlignment = Alignment.Center) {
-            Column(Modifier.dialogPanel(width = 460.dp, padding = 28.dp)) {
-                Text(
-                    stringResource(R.string.settings_sources_refresh_days_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.onSurface,
-                )
-                Spacer(Modifier.height(18.dp))
-                FocusableSurface(
-                    onClick = {},
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focus)
-                        .onKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                            val step = when (event.key.horizontalDirection(layoutDirection)) {
-                                HorizontalDirection.START -> -1
-                                HorizontalDirection.END -> +1
-                                null -> return@onKeyEvent false
-                            }
-                            days = (days + step).coerceIn(PlaylistRefresh.MIN_MANUAL_DAYS, PlaylistRefresh.MAX_MANUAL_DAYS)
-                            true
-                        },
-                    shape = RoundedCornerShape(14.dp),
-                    contentAlignment = Alignment.Center,
-                    surface = GlassSurface.CARDS,
-                ) { _ ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        StepperGlyph("\u2212", days > PlaylistRefresh.MIN_MANUAL_DAYS)
-                        Text(
-                            pluralStringResource(R.plurals.settings_sources_refresh_days, days, days),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colors.primary,
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Center,
-                        )
-                        StepperGlyph("+", days < PlaylistRefresh.MAX_MANUAL_DAYS)
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    stringResource(R.string.settings_sources_refresh_days_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(22.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    OwnTVButton(stringResource(R.string.common_cancel), onClick = onDismiss, style = OwnTVButtonStyle.SECONDARY)
-                    Spacer(Modifier.weight(1f))
-                    OwnTVButton(stringResource(R.string.common_ok), onClick = { onConfirm(days) })
-                }
-            }
-        }
-    }
-}
-
-/** The minus / plus markers either side of the value; dimmed at the ends of the range. */
-@Composable
-private fun StepperGlyph(glyph: String, enabled: Boolean) {
-    val colors = OwnTVTheme.colors
-    Text(
-        glyph,
-        style = MaterialTheme.typography.titleLarge,
-        color = if (enabled) colors.onSurface else colors.onSurfaceVariant,
-        modifier = Modifier.width(32.dp),
-        textAlign = TextAlign.Center,
+    DayStepperDialog(
+        title = stringResource(R.string.settings_sources_refresh_days_title),
+        hint = stringResource(R.string.settings_sources_refresh_days_hint),
+        initialDays = initialDays,
+        minDays = PlaylistRefresh.MIN_MANUAL_DAYS,
+        maxDays = PlaylistRefresh.MAX_MANUAL_DAYS,
+        label = { days -> pluralStringResource(R.plurals.settings_sources_refresh_days, days, days) },
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
     )
 }
 
